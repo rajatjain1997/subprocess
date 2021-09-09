@@ -2,6 +2,7 @@
 #include <initializer_list>
 #include <filesystem>
 #include <memory>
+#include "file_descriptor.hpp"
 
 namespace subprocess
 {
@@ -22,15 +23,15 @@ namespace subprocess
 
         command &operator|(command other);
 
-        command &operator>(int fd);
+        command &operator>(file_descriptor fd);
 
-        command &operator>=(int fd);
+        command &operator>=(file_descriptor fd);
 
-        command &operator>>(int fd);
+        command &operator>>(file_descriptor fd);
 
-        command &operator>>=(int fd);
+        command &operator>>=(file_descriptor fd);
 
-        command &operator<(int fd);
+        command &operator<(file_descriptor fd);
 
         command &operator>=(std::string &output);
 

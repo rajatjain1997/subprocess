@@ -10,7 +10,7 @@
 #include <optional>
 #include <functional>
 #include "popen.hpp"
-#include "util.hpp"
+#include "file_descriptor.hpp"
 #include "command.hpp"
 
 namespace subprocess
@@ -19,26 +19,13 @@ namespace subprocess
     {
 
         std::deque<subprocess::popen> processes;
-        int max_fd{util::kMinFD};
-        std::optional<std::pair<int, std::reference_wrapper<std::string>>> captured_stdout, captured_stderr;
+        std::optional<std::pair<file_descriptor, std::reference_wrapper<std::string>>> captured_stdout, captured_stderr;
+        std::deque<file_descriptor> descriptors_to_close;
 
         PrivateImpl() {}
         PrivateImpl(std::initializer_list<const char *> cmd)
         {
             processes.push_back(subprocess::popen{std::move(cmd)});
-        }
-
-        void set_max_fd(int fd)
-        {
-            max_fd = std::max(max_fd, fd);
-        }
-
-        std::tuple<int, int> create_pipe_()
-        {
-            const auto &[read_fd, write_fd] = util::safe_create_pipe();
-            set_max_fd(read_fd);
-            set_max_fd(write_fd);
-            return {read_fd, write_fd};
         }
     };
 
@@ -82,13 +69,14 @@ namespace subprocess
                 {
                     optional_stream_pair->second.get().append(buf);
                 }
+                optional_stream_pair->first.close();
             }
         };
         pids.clear();
         int pid, waitstatus;
         for (auto &process : pimpl->processes)
         {
-            pids.push_back(process.execute(pimpl->max_fd));
+            pids.push_back(process.execute());
         }
         capture_stream(pimpl->captured_stdout);
         capture_stream(pimpl->captured_stderr);
@@ -101,49 +89,47 @@ namespace subprocess
 
     command &command::operator|(command other)
     {
-        const auto &[read_fd, write_fd] = pimpl->create_pipe_();
+        auto [read_fd, write_fd] = file_descriptor::create_pipe();
         other.pimpl->processes.front().in() = read_fd;
         pimpl->processes.back().out() = write_fd;
         std::move(other.pimpl->processes.begin(), other.pimpl->processes.end(), std::back_inserter(pimpl->processes));
-        pimpl->set_max_fd(other.pimpl->max_fd);
+        pimpl->captured_stdout = std::move(other.pimpl->captured_stdout);
+        pimpl->captured_stderr = std::move(other.pimpl->captured_stderr);
         return *this;
     }
 
-    command &command::operator>(int fd)
+    command &command::operator>(file_descriptor fd)
     {
         pimpl->captured_stdout.reset();
-        pimpl->processes.back().out() = fd;
-        pimpl->set_max_fd(fd);
+        pimpl->processes.back().out() = std::move(fd);
         return *this;
     }
 
-    command &command::operator>=(int fd)
+    command &command::operator>=(file_descriptor fd)
     {
-        pimpl->processes.back().err() = fd;
-        pimpl->set_max_fd(fd);
+        pimpl->processes.back().err() = std::move(fd);
         return *this;
     }
 
-    command &command::operator>>(int fd)
+    command &command::operator>>(file_descriptor fd)
     {
-        return (*this > fd);
+        return (*this > std::move(fd));
     }
 
-    command &command::operator>>=(int fd)
+    command &command::operator>>=(file_descriptor fd)
     {
-        return (*this >= fd);
+        return (*this >= std::move(fd));
     }
 
-    command &command::operator<(int fd)
+    command &command::operator<(file_descriptor fd)
     {
-        pimpl->processes.front().in() = fd;
-        pimpl->set_max_fd(fd);
+        pimpl->processes.front().in() = std::move(fd);
         return *this;
     }
 
     command &command::operator>=(std::string &output)
     {
-        const auto &[read_fd, write_fd] = pimpl->create_pipe_();
+        auto [read_fd, write_fd] = file_descriptor::create_pipe();
         *this > write_fd;
         pimpl->captured_stderr = {read_fd, output};
         return *this;
@@ -151,7 +137,7 @@ namespace subprocess
 
     command &command::operator>(std::string &output)
     {
-        const auto &[read_fd, write_fd] = pimpl->create_pipe_();
+        auto [read_fd, write_fd] = file_descriptor::create_pipe();
         *this > write_fd;
         pimpl->captured_stdout = {read_fd, output};
         return *this;
@@ -159,34 +145,35 @@ namespace subprocess
 
     command &command::operator<(std::string &input)
     {
-        const auto &[read_fd, write_fd] = pimpl->create_pipe_();
-        *this < read_fd;
+        auto [read_fd, write_fd] = file_descriptor::create_pipe();
+        *this < std::move(read_fd);
         ::write(write_fd, input.c_str(), input.size());
+        write_fd.close();
         return *this;
     }
 
     command &command::operator>(const std::filesystem::path &file_name)
     {
-        return *this > util::safe_open_file(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+        return *this > file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
     }
 
     command &command::operator>=(const std::filesystem::path &file_name)
     {
-        return *this >= util::safe_open_file(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+        return *this >= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
     }
 
     command &command::operator>>(const std::filesystem::path &file_name)
     {
-        return *this >> util::safe_open_file(file_name, O_WRONLY | O_CREAT | O_APPEND);
+        return *this >> file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
     }
 
     command &command::operator>>=(const std::filesystem::path &file_name)
     {
-        return *this >>= util::safe_open_file(file_name, O_WRONLY | O_CREAT | O_APPEND);
+        return *this >>= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
     }
 
     command &command::operator<(std::filesystem::path file_name)
     {
-        return *this < util::safe_open_file(file_name, O_RDONLY);
+        return *this < file_descriptor::open(file_name, O_RDONLY);
     }
 }

@@ -2,6 +2,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include "file_descriptor.hpp"
 
 namespace subprocess
 {
@@ -18,13 +19,13 @@ namespace subprocess
 
         ~popen();
 
-        int execute(int max_fd);
+        int execute();
 
-        int& in();
+        file_descriptor& in();
 
-        int& out();
+        file_descriptor& out();
 
-        int& err();
+        file_descriptor& err();
 
     private:
         struct PrivateImpl;

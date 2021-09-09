@@ -6,8 +6,8 @@ set_property(GLOBAL PROPERTY CMAKE_CXX_STANDARD 17)
 
 add_library(subprocess SHARED
     detail/popen.cpp
-    detail/util.cpp
     detail/command.cpp
+    detail/file_descriptor.cpp
     subprocess.hpp
 )
 

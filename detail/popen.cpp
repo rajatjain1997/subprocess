@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <initializer_list>
 #include <vector>
-#include "util.hpp"
 #include "popen.hpp"
 
 namespace subprocess
@@ -12,7 +11,7 @@ namespace subprocess
     struct popen::PrivateImpl
     {
         std::vector<const char *> cmd_;
-        int stdin_fd{STDIN_FILENO}, stdout_fd{STDOUT_FILENO}, stderr_fd{STDERR_FILENO};
+        file_descriptor stdin_fd{STDIN_FILENO}, stdout_fd{STDOUT_FILENO}, stderr_fd{STDERR_FILENO};
 
         PrivateImpl()
         {
@@ -53,44 +52,53 @@ namespace subprocess
 
     popen::~popen() {}
 
-    int popen::execute(int max_fd)
+    int popen::execute()
     {
+        auto dup_and_close = [](file_descriptor& fd, const file_descriptor& dup_to)
+        {
+            fd.dup(dup_to);
+            fd.close();
+            fd.close_linked();
+        };
+        auto close_if_linked = [](file_descriptor& fd)
+        {
+            if (fd.linked()) 
+            {
+                fd.close();
+            }
+        };
         if (int pid{::fork()}; pid < 0)
         {
             throw std::exception{};
         }
         else if (pid == 0)
         {
-            ::dup2(pimpl->stdin_fd, STDIN_FILENO);
-            ::dup2(pimpl->stdout_fd, STDOUT_FILENO);
-            ::dup2(pimpl->stderr_fd, STDERR_FILENO);
-            for (int i{0}; i <= max_fd; i++)
-            {
-                util::safe_close_fd(i);
-            }
+            dup_and_close(pimpl->stdin_fd, {STDIN_FILENO});
+            dup_and_close(pimpl->stdout_fd, {STDOUT_FILENO});
+            dup_and_close(pimpl->stderr_fd, {STDERR_FILENO});
             ::execvp(pimpl->cmd_[0], const_cast<char *const *>(&(pimpl->cmd_[0])));
             return 0;
         }
         else
         {
-            util::safe_close_fd(pimpl->stdout_fd);
-            util::safe_close_fd(pimpl->stderr_fd);
-            util::safe_close_fd(pimpl->stdin_fd);
+            close_if_linked(pimpl->stdout_fd);
+            close_if_linked(pimpl->stdin_fd);
+            close_if_linked(pimpl->stderr_fd);
             return pid;
         }
     }
 
-    int &popen::in()
+    file_descriptor& popen::in()
     {
         return pimpl->stdin_fd;
     }
 
-    int &popen::out()
+    file_descriptor& popen::out()
     {
         return pimpl->stdout_fd;
     }
 
-    int &popen::err()
+    file_descriptor& popen::err()
     {
         return pimpl->stderr_fd;
     }
