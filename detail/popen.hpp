@@ -12,20 +12,20 @@ namespace subprocess
 
     public:
         popen(std::initializer_list<const char *> cmd);
-        popen(const popen& other);
-        popen(popen&& other);
-        popen& operator=(const popen& other);
-        popen& operator=(popen&& other);
+        popen(const popen &other);
+        popen(popen &&other);
+        popen &operator=(const popen &other);
+        popen &operator=(popen &&other);
 
         ~popen();
 
         int execute();
 
-        file_descriptor& in();
+        file_descriptor &in();
 
-        file_descriptor& out();
+        file_descriptor &out();
 
-        file_descriptor& err();
+        file_descriptor &err();
 
     private:
         struct PrivateImpl;

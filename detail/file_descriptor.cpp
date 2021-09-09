@@ -7,7 +7,7 @@
 namespace subprocess
 {
 
-    /*static*/ const int file_descriptor::kMinFD_{STDERR_FILENO + 1}; 
+    /*static*/ const int file_descriptor::kMinFD_{STDERR_FILENO + 1};
 
     /*static*/ file_descriptor file_descriptor::open(std::filesystem::path file_name, int flags)
     {
@@ -19,7 +19,7 @@ namespace subprocess
         {
             return {fd, std::move(file_name)};
         }
-    } 
+    }
 
     /*static*/ std::pair<file_descriptor, file_descriptor> file_descriptor::create_pipe()
     {
@@ -33,13 +33,13 @@ namespace subprocess
         link(read_fd, write_fd);
         return {read_fd, write_fd};
     }
-    
-    file_descriptor::file_descriptor(file_descriptor&& other) noexcept : file_descriptor()
+
+    file_descriptor::file_descriptor(file_descriptor &&other) noexcept : file_descriptor()
     {
         *this = std::move(other);
     }
 
-    file_descriptor& file_descriptor::operator=(file_descriptor&& other) noexcept
+    file_descriptor &file_descriptor::operator=(file_descriptor &&other) noexcept
     {
         std::swap(fd_, other.fd_);
         std::swap(file_path_, other.file_path_);
@@ -49,7 +49,7 @@ namespace subprocess
 
     file_descriptor::~file_descriptor()
     {
-        if(file_path_ and fd_.use_count() <= 1)
+        if (file_path_ and fd_.use_count() <= 1)
         {
             close();
         }
@@ -66,25 +66,43 @@ namespace subprocess
 
     void file_descriptor::close_linked()
     {
-        if(linked_fd_)
+        if (linked_fd_)
         {
             linked_fd_->close();
         }
     }
 
-    void file_descriptor::dup(const file_descriptor& other)
+    void file_descriptor::dup(const file_descriptor &other)
     {
         ::dup2(fd(), other.fd());
     }
 
-    void link(file_descriptor& fd1, file_descriptor& fd2)
+    void file_descriptor::write(std::string &input)
     {
-        auto link_fds = [](file_descriptor& linking_fd, file_descriptor& linked_fd)
+        ::write(fd(), input.c_str(), input.size());
+    }
+
+    std::string file_descriptor::read()
+    {
+        static char buf[2048];
+        static std::string output;
+        output.clear();
+        while (::read(fd(), buf, 2048) > 0)
         {
-            if(linking_fd.linked_fd_)
+            output.append(buf);
+        }
+        return output;
+    }
+
+    void link(file_descriptor &fd1, file_descriptor &fd2)
+    {
+        auto link_fds = [](file_descriptor &linking_fd, file_descriptor &linked_fd)
+        {
+            if (linking_fd.linked_fd_)
             {
                 throw std::exception{};
-            } else
+            }
+            else
             {
                 linking_fd.linked_fd_ = &linked_fd;
             }

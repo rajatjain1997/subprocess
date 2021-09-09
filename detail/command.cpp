@@ -1,5 +1,3 @@
-#include <fcntl.h>
-#include <unistd.h>
 #include <string>
 #include <tuple>
 #include <algorithm>
@@ -64,11 +62,9 @@ namespace subprocess
         {
             if (optional_stream_pair)
             {
-                optional_stream_pair->second.get().clear();
-                while (::read(optional_stream_pair->first, buf, 2048) > 0)
-                {
-                    optional_stream_pair->second.get().append(buf);
-                }
+                std::string &output{optional_stream_pair->second.get()};
+                output.clear();
+                output = std::move(optional_stream_pair->first.read());
                 optional_stream_pair->first.close();
             }
         };
@@ -147,7 +143,7 @@ namespace subprocess
     {
         auto [read_fd, write_fd] = file_descriptor::create_pipe();
         *this < std::move(read_fd);
-        ::write(write_fd, input.c_str(), input.size());
+        write_fd.write(input);
         write_fd.close();
         return *this;
     }

@@ -54,15 +54,15 @@ namespace subprocess
 
     int popen::execute()
     {
-        auto dup_and_close = [](file_descriptor& fd, const file_descriptor& dup_to)
+        auto dup_and_close = [](file_descriptor &fd, const file_descriptor &dup_to)
         {
             fd.dup(dup_to);
             fd.close();
             fd.close_linked();
         };
-        auto close_if_linked = [](file_descriptor& fd)
+        auto close_if_linked = [](file_descriptor &fd)
         {
-            if (fd.linked()) 
+            if (fd.linked())
             {
                 fd.close();
             }
@@ -88,17 +88,17 @@ namespace subprocess
         }
     }
 
-    file_descriptor& popen::in()
+    file_descriptor &popen::in()
     {
         return pimpl->stdin_fd;
     }
 
-    file_descriptor& popen::out()
+    file_descriptor &popen::out()
     {
         return pimpl->stdout_fd;
     }
 
-    file_descriptor& popen::err()
+    file_descriptor &popen::err()
     {
         return pimpl->stderr_fd;
     }
