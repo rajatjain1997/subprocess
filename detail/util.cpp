@@ -1,15 +1,12 @@
-#pragma once
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <filesystem>
 #include <tuple>
+#include "util.hpp"
 
 namespace subprocess::util
 {
-    static constexpr int kMinFD{STDERR_FILENO + 1};
-
     void safe_close_fd(int fd)
     {
         if (fd > kMinFD)
