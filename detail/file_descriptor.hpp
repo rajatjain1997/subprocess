@@ -13,7 +13,7 @@ namespace subprocess
         static file_descriptor open(std::filesystem::path file_name, int flags);
         static std::pair<file_descriptor, file_descriptor> create_pipe();
 
-        file_descriptor(int fd = -1, std::optional<std::filesystem::path> file_path = {}) : fd_{std::make_shared<int>(fd)}, file_path_{file_path} {}
+        file_descriptor(int fd = -1) : fd_{std::make_shared<int>(fd)} {}
         file_descriptor(const file_descriptor &other) = default;
         file_descriptor &operator=(const file_descriptor &other) = default;
         file_descriptor(file_descriptor &&fd) noexcept;
@@ -42,6 +42,10 @@ namespace subprocess
         std::string read();
 
     private:
+        file_descriptor(int fd, std::optional<std::filesystem::path> file_path) : file_descriptor(fd)
+        {
+            file_path_ = std::move(file_path);
+        }
         static const int kMinFD_;
         std::optional<std::filesystem::path> file_path_;
         std::shared_ptr<int> fd_;
