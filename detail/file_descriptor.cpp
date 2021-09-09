@@ -7,6 +7,14 @@
 namespace subprocess
 {
 
+    enum standard_filenos
+    {
+        standard_in = STDIN_FILENO,
+        standard_out = STDOUT_FILENO,
+        standard_error = STDERR_FILENO,
+        max_standard_fd
+    };
+
     /*static*/ const int file_descriptor::kMinFD_{STDERR_FILENO + 1};
 
     /*static*/ file_descriptor file_descriptor::open(std::filesystem::path file_name, int flags)
@@ -93,6 +101,10 @@ namespace subprocess
         }
         return output;
     }
+
+    const file_descriptor in{file_descriptor{standard_filenos::standard_in}};
+    const file_descriptor out{file_descriptor{standard_filenos::standard_out}};
+    const file_descriptor err{file_descriptor{standard_filenos::standard_error}};
 
     void link(file_descriptor &fd1, file_descriptor &fd2)
     {

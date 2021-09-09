@@ -49,5 +49,9 @@ namespace subprocess
         friend void link(file_descriptor &fd1, file_descriptor &fd2);
     };
 
+    extern const file_descriptor in;
+    extern const file_descriptor out;
+    extern const file_descriptor err;
+
     void link(file_descriptor &fd1, file_descriptor &fd2);
 }

@@ -11,7 +11,7 @@ namespace subprocess
     struct popen::PrivateImpl
     {
         std::vector<const char *> cmd_;
-        file_descriptor stdin_fd{STDIN_FILENO}, stdout_fd{STDOUT_FILENO}, stderr_fd{STDERR_FILENO};
+        file_descriptor stdin_fd{subprocess::in}, stdout_fd{subprocess::out}, stderr_fd{subprocess::err};
 
         PrivateImpl()
         {
