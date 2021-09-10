@@ -4,9 +4,11 @@
 #include <memory>
 #include <string>
 
-namespace subprocess {
+namespace subprocess
+{
 
-class command {
+class command
+{
 public:
   command(std::initializer_list<const char*> cmd);
 

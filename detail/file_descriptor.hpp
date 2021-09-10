@@ -5,8 +5,10 @@
 #include <optional>
 #include <tuple>
 
-namespace subprocess {
-class file_descriptor {
+namespace subprocess
+{
+class file_descriptor
+{
 public:
   static file_descriptor open(std::filesystem::path file_name, int flags);
   static std::pair<file_descriptor, file_descriptor> create_pipe();
@@ -31,7 +33,8 @@ public:
   std::string read();
 
 private:
-  file_descriptor(int fd, std::optional<std::filesystem::path> file_path) : file_descriptor(fd) {
+  file_descriptor(int fd, std::optional<std::filesystem::path> file_path) : file_descriptor(fd)
+  {
     file_path_ = std::move(file_path);
   }
   static const int kMinFD_;

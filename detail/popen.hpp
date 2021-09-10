@@ -4,9 +4,11 @@
 #include <initializer_list>
 #include <memory>
 
-namespace subprocess {
+namespace subprocess
+{
 
-class popen {
+class popen
+{
 
 public:
   popen(std::initializer_list<const char*> cmd);
