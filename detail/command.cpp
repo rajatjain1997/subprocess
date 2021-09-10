@@ -9,6 +9,8 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <tuple>
 #include <vector>
 
