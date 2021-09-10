@@ -12,9 +12,9 @@ class command
 public:
   command(std::initializer_list<const char*> cmd);
 
-  command(const command& other);
+  command(const command& other) = delete;
   command(command&& other);
-  command& operator=(const command& other);
+  command& operator=(const command& other) = delete;
   command& operator=(command&& other);
 
   ~command();

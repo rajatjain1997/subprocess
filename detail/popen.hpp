@@ -12,9 +12,9 @@ class popen
 
 public:
   popen(std::initializer_list<const char*> cmd);
-  popen(const popen& other);
+  popen(const popen& other) = delete;
   popen(popen&& other);
-  popen& operator=(const popen& other);
+  popen& operator=(const popen& other) = delete;
   popen& operator=(popen&& other);
 
   ~popen();

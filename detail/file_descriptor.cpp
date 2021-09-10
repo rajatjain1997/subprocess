@@ -37,7 +37,7 @@ enum standard_filenos
   file_descriptor read_fd{fd[0]};
   file_descriptor write_fd{fd[1]};
   link(read_fd, write_fd);
-  return {read_fd, write_fd};
+  return {std::move(read_fd), std::move(write_fd)};
 }
 
 file_descriptor::file_descriptor(file_descriptor&& other) noexcept : file_descriptor()
@@ -55,7 +55,7 @@ file_descriptor& file_descriptor::operator=(file_descriptor&& other) noexcept
 
 file_descriptor::~file_descriptor()
 {
-  if (file_path_ and fd_.use_count() <= 1) close();
+  if (file_path_) close();
 }
 
 void file_descriptor::close()
@@ -94,9 +94,9 @@ std::string file_descriptor::read()
   return output;
 }
 
-const file_descriptor in{file_descriptor{standard_filenos::standard_in}};
-const file_descriptor out{file_descriptor{standard_filenos::standard_out}};
-const file_descriptor err{file_descriptor{standard_filenos::standard_error}};
+file_descriptor in() { return file_descriptor{standard_filenos::standard_in}; };
+file_descriptor out() { return file_descriptor{standard_filenos::standard_out}; };
+file_descriptor err() { return file_descriptor{standard_filenos::standard_error}; };
 
 void link(file_descriptor& fd1, file_descriptor& fd2)
 {

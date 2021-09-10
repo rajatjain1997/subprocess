@@ -12,7 +12,7 @@ namespace subprocess
 struct popen::PrivateImpl
 {
   std::vector<const char*> cmd_;
-  file_descriptor stdin_fd{subprocess::in}, stdout_fd{subprocess::out}, stderr_fd{subprocess::err};
+  file_descriptor stdin_fd{subprocess::in()}, stdout_fd{subprocess::out()}, stderr_fd{subprocess::err()};
 
   PrivateImpl() {}
 
@@ -26,17 +26,10 @@ struct popen::PrivateImpl
 
 popen::popen(std::initializer_list<const char*> cmd) : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))} {}
 
-popen::popen(const popen& other) : pimpl(std::make_unique<PrivateImpl>()) { *pimpl = *(other.pimpl); };
-
 popen::popen(popen&& other)
 {
   pimpl.reset();
   pimpl.swap(other.pimpl);
-};
-popen& popen::operator=(const popen& other)
-{
-  *pimpl = *(other.pimpl);
-  return *this;
 };
 popen& popen::operator=(popen&& other)
 {

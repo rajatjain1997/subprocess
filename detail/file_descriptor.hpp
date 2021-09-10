@@ -13,14 +13,14 @@ public:
   static file_descriptor open(std::filesystem::path file_name, int flags);
   static std::pair<file_descriptor, file_descriptor> create_pipe();
 
-  file_descriptor(int fd = -1) : fd_{std::make_shared<int>(fd)} {}
-  file_descriptor(const file_descriptor& other) = default;
-  file_descriptor& operator=(const file_descriptor& other) = default;
+  file_descriptor(int fd = -1) : fd_{fd} {}
+  file_descriptor(const file_descriptor& other) = delete;
+  file_descriptor& operator=(const file_descriptor& other) = delete;
   file_descriptor(file_descriptor&& fd) noexcept;
   file_descriptor& operator=(file_descriptor&& other) noexcept;
   ~file_descriptor();
 
-  int fd() const { return *fd_; }
+  int fd() const { return fd_; }
 
   bool linked() const { return linked_fd_ != nullptr; }
 
@@ -39,14 +39,14 @@ private:
   }
   static const int kMinFD_;
   std::optional<std::filesystem::path> file_path_;
-  std::shared_ptr<int> fd_;
+  int fd_;
   file_descriptor* linked_fd_{nullptr};
   friend void link(file_descriptor& fd1, file_descriptor& fd2);
 };
 
-extern const file_descriptor in;
-extern const file_descriptor out;
-extern const file_descriptor err;
+file_descriptor in();
+file_descriptor out();
+file_descriptor err();
 
 void link(file_descriptor& fd1, file_descriptor& fd2);
 } // namespace subprocess

@@ -36,23 +36,17 @@ command::command(std::initializer_list<const char*> cmd)
 {
 }
 
-command::command(const command& other) : pimpl(std::make_unique<PrivateImpl>()) { *pimpl = *(other.pimpl); };
-
 command::command(command&& other)
 {
   pimpl.reset();
   pimpl.swap(other.pimpl);
-};
-command& command::operator=(const command& other)
-{
-  *pimpl = *(other.pimpl);
-  return *this;
-};
+}
+
 command& command::operator=(command&& other)
 {
   pimpl.swap(other.pimpl);
   return *this;
-};
+}
 
 command::~command() {}
 
@@ -88,8 +82,8 @@ int command::run()
 command& command::operator|(command&& other)
 {
   auto [read_fd, write_fd] = file_descriptor::create_pipe();
-  other.pimpl->processes.front().in() = read_fd;
-  pimpl->processes.back().out() = write_fd;
+  other.pimpl->processes.front().in() = std::move(read_fd);
+  pimpl->processes.back().out() = std::move(write_fd);
   std::move(other.pimpl->processes.begin(), other.pimpl->processes.end(),
             std::back_inserter(pimpl->processes));
   pimpl->captured_stdout = std::move(other.pimpl->captured_stdout);
@@ -123,16 +117,16 @@ command& operator<(command& cmd, file_descriptor fd)
 command& operator>=(command& cmd, std::string& output)
 {
   auto [read_fd, write_fd] = file_descriptor::create_pipe();
-  cmd > write_fd;
-  cmd.pimpl->captured_stderr = {read_fd, output};
+  cmd > std::move(write_fd);
+  cmd.pimpl->captured_stderr = {std::move(read_fd), output};
   return cmd;
 }
 
 command& operator>(command& cmd, std::string& output)
 {
   auto [read_fd, write_fd] = file_descriptor::create_pipe();
-  cmd > write_fd;
-  cmd.pimpl->captured_stdout = {read_fd, output};
+  cmd > std::move(write_fd);
+  cmd.pimpl->captured_stdout = {std::move(read_fd), output};
   return cmd;
 }
 
@@ -170,15 +164,15 @@ command& operator<(command& cmd, std::filesystem::path file_name)
   return cmd < file_descriptor::open(file_name, O_RDONLY);
 }
 
-command&& operator>(command&& cmd, file_descriptor fd) { return std::move(cmd > fd); }
+command&& operator>(command&& cmd, file_descriptor fd) { return std::move(cmd > std::move(fd)); }
 
-command&& operator>=(command&& cmd, file_descriptor fd) { return std::move(cmd >= fd); }
+command&& operator>=(command&& cmd, file_descriptor fd) { return std::move(cmd >= std::move(fd)); }
 
-command&& operator>>(command&& cmd, file_descriptor fd) { return std::move(cmd >> fd); }
+command&& operator>>(command&& cmd, file_descriptor fd) { return std::move(cmd >> std::move(fd)); }
 
-command&& operator>>=(command&& cmd, file_descriptor fd) { return std::move(cmd >>= fd); }
+command&& operator>>=(command&& cmd, file_descriptor fd) { return std::move(cmd >>= std::move(fd)); }
 
-command&& operator<(command&& cmd, file_descriptor fd) { return std::move(cmd < fd); }
+command&& operator<(command&& cmd, file_descriptor fd) { return std::move(cmd < std::move(fd)); }
 
 command&& operator>=(command&& cmd, std::string& output) { return std::move(cmd >= output); }
 
