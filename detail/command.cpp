@@ -1,4 +1,5 @@
 #include "command.hpp"
+#include "exceptions.hpp"
 #include "fcntl.h"
 #include "file_descriptor.hpp"
 #include "popen.hpp"
@@ -20,14 +21,41 @@ struct command::PrivateImpl
   std::deque<subprocess::popen> processes;
   std::optional<std::pair<file_descriptor, std::reference_wrapper<std::string>>> captured_stdout,
       captured_stderr;
-  std::deque<file_descriptor> descriptors_to_close;
 
   PrivateImpl() {}
   PrivateImpl(std::initializer_list<const char*> cmd)
   {
     processes.push_back(subprocess::popen{std::move(cmd)});
   }
+
+  int run();
 };
+
+int command::PrivateImpl::run()
+{
+  auto capture_stream = [](auto& optional_stream_pair)
+  {
+    if (optional_stream_pair)
+    {
+      std::string& output{optional_stream_pair->second.get()};
+      output.clear();
+      output = std::move(optional_stream_pair->first.read());
+      optional_stream_pair->first.close();
+    }
+  };
+  for (auto& process : processes)
+  {
+    process.execute();
+  }
+  capture_stream(captured_stdout);
+  capture_stream(captured_stderr);
+  int waitstatus;
+  for (auto& process : processes)
+  {
+    waitstatus = process.wait();
+  }
+  return WEXITSTATUS(waitstatus);
+}
 
 command::command(std::initializer_list<const char*> cmd)
     : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))}
@@ -48,30 +76,18 @@ command& command::operator=(command&& other)
 
 command::~command() {}
 
+int command::run(std::nothrow_t) noexcept { return pimpl->run(); }
+
 int command::run()
 {
-  auto capture_stream = [](auto& optional_stream_pair)
+  if (int status{run(std::nothrow)}; status != 0)
   {
-    if (optional_stream_pair)
-    {
-      std::string& output{optional_stream_pair->second.get()};
-      output.clear();
-      output = std::move(optional_stream_pair->first.read());
-      optional_stream_pair->first.close();
-    }
-  };
-  for (auto& process : pimpl->processes)
-  {
-    process.execute();
+    throw command_error{"Command exited with code " + std::to_string(status) + ".", status};
   }
-  capture_stream(pimpl->captured_stdout);
-  capture_stream(pimpl->captured_stderr);
-  int waitstatus;
-  for (auto& process : pimpl->processes)
+  else
   {
-    waitstatus = process.wait();
+    return status;
   }
-  return WEXITSTATUS(waitstatus);
 }
 
 command& command::operator|(command&& other)

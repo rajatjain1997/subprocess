@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <initializer_list>
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 
 namespace subprocess
@@ -63,7 +63,7 @@ void popen::execute()
     dup_and_close(pimpl->stdin_fd, {STDIN_FILENO});
     dup_and_close(pimpl->stdout_fd, {STDOUT_FILENO});
     dup_and_close(pimpl->stderr_fd, {STDERR_FILENO});
-    ::execvp(pimpl->cmd_[0], const_cast<char* const*>(&(pimpl->cmd_[0])));
+    exit(::execvp(pimpl->cmd_[0], const_cast<char* const*>(&(pimpl->cmd_[0]))));
   }
   else
   {
@@ -76,9 +76,13 @@ void popen::execute()
 
 int popen::wait()
 {
-    int waitstatus;
-    ::waitpid(*(pimpl->pid_), &waitstatus, 0);
-    return waitstatus;
+  if (not pimpl->pid_)
+  {
+    throw usage_error{"popen.wait() called before popen.execute()"};
+  }
+  int waitstatus;
+  ::waitpid(*(pimpl->pid_), &waitstatus, 0);
+  return waitstatus;
 }
 
 file_descriptor& popen::in() { return pimpl->stdin_fd; }

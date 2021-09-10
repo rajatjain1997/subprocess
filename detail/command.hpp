@@ -2,11 +2,11 @@
 #include <filesystem>
 #include <initializer_list>
 #include <memory>
+#include <new>
 #include <string>
 
 namespace subprocess
 {
-
 class command
 {
 public:
@@ -20,6 +20,8 @@ public:
   ~command();
 
   int run();
+
+  int run(std::nothrow_t) noexcept;
 
   command& operator|(command&& other);
 
