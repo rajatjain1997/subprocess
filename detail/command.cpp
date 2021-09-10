@@ -9,8 +9,6 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <tuple>
 #include <vector>
 
@@ -52,8 +50,6 @@ command::~command() {}
 
 int command::run()
 {
-  static char buf[2048];
-  static std::vector<int> pids;
   auto capture_stream = [](auto& optional_stream_pair)
   {
     if (optional_stream_pair)
@@ -64,17 +60,16 @@ int command::run()
       optional_stream_pair->first.close();
     }
   };
-  pids.clear();
-  int pid, waitstatus;
   for (auto& process : pimpl->processes)
   {
-    pids.push_back(process.execute());
+    process.execute();
   }
   capture_stream(pimpl->captured_stdout);
   capture_stream(pimpl->captured_stderr);
-  for (auto pid : pids)
+  int waitstatus;
+  for (auto& process : pimpl->processes)
   {
-    ::waitpid(pid, &waitstatus, 0);
+    waitstatus = process.wait();
   }
   return WEXITSTATUS(waitstatus);
 }

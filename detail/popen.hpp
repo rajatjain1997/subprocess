@@ -19,7 +19,9 @@ public:
 
   ~popen();
 
-  int execute();
+  void execute();
+
+  int wait();
 
   file_descriptor& in();
 

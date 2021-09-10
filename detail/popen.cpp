@@ -4,6 +4,8 @@
 #include <initializer_list>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <vector>
 
 namespace subprocess
@@ -13,6 +15,7 @@ struct popen::PrivateImpl
 {
   std::vector<const char*> cmd_;
   file_descriptor stdin_fd{subprocess::in()}, stdout_fd{subprocess::out()}, stderr_fd{subprocess::err()};
+  std::optional<int> pid_;
 
   PrivateImpl() {}
 
@@ -39,7 +42,7 @@ popen& popen::operator=(popen&& other)
 
 popen::~popen() {}
 
-int popen::execute()
+void popen::execute()
 {
   auto dup_and_close = [](file_descriptor& fd, const file_descriptor& dup_to)
   {
@@ -61,15 +64,21 @@ int popen::execute()
     dup_and_close(pimpl->stdout_fd, {STDOUT_FILENO});
     dup_and_close(pimpl->stderr_fd, {STDERR_FILENO});
     ::execvp(pimpl->cmd_[0], const_cast<char* const*>(&(pimpl->cmd_[0])));
-    return 0;
   }
   else
   {
-    close_if_linked(pimpl->stdout_fd);
     close_if_linked(pimpl->stdin_fd);
+    close_if_linked(pimpl->stdout_fd);
     close_if_linked(pimpl->stderr_fd);
-    return pid;
+    pimpl->pid_ = pid;
   }
+}
+
+int popen::wait()
+{
+    int waitstatus;
+    ::waitpid(*(pimpl->pid_), &waitstatus, 0);
+    return waitstatus;
 }
 
 file_descriptor& popen::in() { return pimpl->stdin_fd; }
