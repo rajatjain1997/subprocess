@@ -1,34 +1,32 @@
 #pragma once
 
+#include "file_descriptor.hpp"
 #include <initializer_list>
 #include <memory>
-#include "file_descriptor.hpp"
 
-namespace subprocess
-{
+namespace subprocess {
 
-    class popen
-    {
+class popen {
 
-    public:
-        popen(std::initializer_list<const char *> cmd);
-        popen(const popen &other);
-        popen(popen &&other);
-        popen &operator=(const popen &other);
-        popen &operator=(popen &&other);
+public:
+  popen(std::initializer_list<const char*> cmd);
+  popen(const popen& other);
+  popen(popen&& other);
+  popen& operator=(const popen& other);
+  popen& operator=(popen&& other);
 
-        ~popen();
+  ~popen();
 
-        int execute();
+  int execute();
 
-        file_descriptor &in();
+  file_descriptor& in();
 
-        file_descriptor &out();
+  file_descriptor& out();
 
-        file_descriptor &err();
+  file_descriptor& err();
 
-    private:
-        struct PrivateImpl;
-        std::unique_ptr<PrivateImpl> pimpl;
-    };
-}
+private:
+  struct PrivateImpl;
+  std::unique_ptr<PrivateImpl> pimpl;
+};
+} // namespace subprocess
