@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <vector>
 #include "popen.hpp"
+#include "exceptions.hpp"
 
 namespace subprocess
 {
@@ -69,7 +70,7 @@ namespace subprocess
         };
         if (int pid{::fork()}; pid < 0)
         {
-            throw std::exception{};
+            throw os_error{"Failed to fork process"};
         }
         else if (pid == 0)
         {

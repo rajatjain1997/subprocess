@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include "file_descriptor.hpp"
+#include "exceptions.hpp"
 #include <iostream>
 
 namespace subprocess
@@ -21,7 +22,7 @@ namespace subprocess
     {
         if (int fd{::open(file_name.c_str(), flags)}; fd < 0)
         {
-            throw std::exception{};
+            throw os_error{"Failed to open file " + file_name.string()};
         }
         else
         {
@@ -34,7 +35,7 @@ namespace subprocess
         int fd[2];
         if (::pipe(fd) < 0)
         {
-            throw std::exception{};
+            throw os_error{"Could not create a pipe!"};
         }
         file_descriptor read_fd{fd[0]};
         file_descriptor write_fd{fd[1]};
@@ -112,7 +113,7 @@ namespace subprocess
         {
             if (linking_fd.linked_fd_)
             {
-                throw std::exception{};
+                throw usage_error{"You tried to link a file descriptor that is already linked to another file descriptor!"};
             }
             else
             {
