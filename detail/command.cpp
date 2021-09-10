@@ -84,7 +84,7 @@ namespace subprocess
         return WEXITSTATUS(waitstatus);
     }
 
-    command &command::operator|(command other)
+    command &command::operator|(command&& other)
     {
         auto [read_fd, write_fd] = file_descriptor::create_pipe();
         other.pimpl->processes.front().in() = read_fd;
@@ -95,82 +95,146 @@ namespace subprocess
         return *this;
     }
 
-    command &command::operator>(file_descriptor fd)
+    command &operator>(command &cmd, file_descriptor fd)
     {
-        pimpl->captured_stdout.reset();
-        pimpl->processes.back().out() = std::move(fd);
-        return *this;
+        cmd.pimpl->captured_stdout.reset();
+        cmd.pimpl->processes.back().out() = std::move(fd);
+        return cmd;
     }
 
-    command &command::operator>=(file_descriptor fd)
+    command &operator>=(command &cmd, file_descriptor fd)
     {
-        pimpl->processes.back().err() = std::move(fd);
-        return *this;
+        cmd.pimpl->processes.back().err() = std::move(fd);
+        return cmd;
     }
 
-    command &command::operator>>(file_descriptor fd)
+    command &operator>>(command &cmd, file_descriptor fd)
     {
-        return (*this > std::move(fd));
+        return (cmd > std::move(fd));
     }
 
-    command &command::operator>>=(file_descriptor fd)
+    command &operator>>=(command &cmd, file_descriptor fd)
     {
-        return (*this >= std::move(fd));
+        return (cmd >= std::move(fd));
     }
 
-    command &command::operator<(file_descriptor fd)
+    command &operator<(command &cmd, file_descriptor fd)
     {
-        pimpl->processes.front().in() = std::move(fd);
-        return *this;
+        cmd.pimpl->processes.front().in() = std::move(fd);
+        return cmd;
     }
 
-    command &command::operator>=(std::string &output)
+    command &operator>=(command &cmd, std::string &output)
     {
         auto [read_fd, write_fd] = file_descriptor::create_pipe();
-        *this > write_fd;
-        pimpl->captured_stderr = {read_fd, output};
-        return *this;
+        cmd > write_fd;
+        cmd.pimpl->captured_stderr = {read_fd, output};
+        return cmd;
     }
 
-    command &command::operator>(std::string &output)
+    command &operator>(command &cmd, std::string &output)
     {
         auto [read_fd, write_fd] = file_descriptor::create_pipe();
-        *this > write_fd;
-        pimpl->captured_stdout = {read_fd, output};
-        return *this;
+        cmd > write_fd;
+        cmd.pimpl->captured_stdout = {read_fd, output};
+        return cmd;
     }
 
-    command &command::operator<(std::string &input)
+    command &operator<(command &cmd, std::string &input)
     {
         auto [read_fd, write_fd] = file_descriptor::create_pipe();
-        *this < std::move(read_fd);
+        cmd < std::move(read_fd);
         write_fd.write(input);
         write_fd.close();
-        return *this;
+        return cmd;
     }
 
-    command &command::operator>(const std::filesystem::path &file_name)
+    command &operator>(command &cmd, const std::filesystem::path &file_name)
     {
-        return *this > file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+        return cmd > file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
     }
 
-    command &command::operator>=(const std::filesystem::path &file_name)
+    command &operator>=(command &cmd, const std::filesystem::path &file_name)
     {
-        return *this >= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+        return cmd >= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
     }
 
-    command &command::operator>>(const std::filesystem::path &file_name)
+    command &operator>>(command &cmd, const std::filesystem::path &file_name)
     {
-        return *this >> file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
+        return cmd >> file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
     }
 
-    command &command::operator>>=(const std::filesystem::path &file_name)
+    command &operator>>=(command &cmd, const std::filesystem::path &file_name)
     {
-        return *this >>= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
+        return cmd >>= file_descriptor::open(file_name, O_WRONLY | O_CREAT | O_APPEND);
     }
 
-    command &command::operator<(std::filesystem::path file_name)
+    command &operator<(command &cmd, std::filesystem::path file_name)
     {
-        return *this < file_descriptor::open(file_name, O_RDONLY);
+        return cmd < file_descriptor::open(file_name, O_RDONLY);
+    }
+
+    command &&operator>(command &&cmd, file_descriptor fd)
+    {
+        return std::move(cmd > fd);
+    }
+
+    command &&operator>=(command &&cmd, file_descriptor fd)
+    {
+        return std::move(cmd >= fd);
+    }
+
+    command &&operator>>(command &&cmd, file_descriptor fd)
+    {
+        return std::move(cmd >> fd);
+    }
+
+    command &&operator>>=(command &&cmd, file_descriptor fd)
+    {
+        return std::move(cmd >>= fd);
+    }
+
+    command &&operator<(command &&cmd, file_descriptor fd)
+    {
+        return std::move(cmd < fd);
+    }
+
+    command &&operator>=(command &&cmd, std::string &output)
+    {
+        return std::move(cmd >= output);
+    }
+
+    command &&operator>(command &&cmd, std::string &output)
+    {
+        return std::move(cmd > output);
+    }
+
+    command &&operator<(command &&cmd, std::string &input)
+    {
+        return std::move(cmd < input);
+    }
+
+    command &&operator>(command &&cmd, const std::filesystem::path &file_name)
+    {
+        return std::move(cmd > file_name);
+    }
+
+    command &&operator>=(command &&cmd, const std::filesystem::path &file_name)
+    {
+        return std::move(cmd >= file_name);
+    }
+    command &&operator>>(command &&cmd, const std::filesystem::path &file_name)
+    {
+        return std::move(cmd >> file_name);
+    }
+
+    command &&operator>>=(command &&cmd, const std::filesystem::path &file_name)
+    {
+        return std::move(cmd >>= file_name);
+    }
+
+    command &&operator<(command &&cmd, std::filesystem::path file_name)
+    {
+        return std::move(cmd < file_name);
     }
 }

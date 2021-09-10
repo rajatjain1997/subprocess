@@ -21,35 +21,73 @@ namespace subprocess
 
         int run();
 
-        command &operator|(command other);
-
-        command &operator>(file_descriptor fd);
-
-        command &operator>=(file_descriptor fd);
-
-        command &operator>>(file_descriptor fd);
-
-        command &operator>>=(file_descriptor fd);
-
-        command &operator<(file_descriptor fd);
-
-        command &operator>=(std::string &output);
-
-        command &operator>(std::string &output);
-
-        command &operator<(std::string &input);
-
-        command &operator>(const std::filesystem::path &file_name);
-
-        command &operator>=(const std::filesystem::path &file_name);
-        command &operator>>(const std::filesystem::path &file_name);
-
-        command &operator>>=(const std::filesystem::path &file_name);
-
-        command &operator<(std::filesystem::path file_name);
+        command &operator|(command&& other);
 
     private:
         struct PrivateImpl;
         std::unique_ptr<PrivateImpl> pimpl;
+
+        friend command &operator<(command &cmd, file_descriptor fd);
+        friend command &&operator<(command &&cmd, file_descriptor fd);
+        friend command &operator<(command &cmd, std::string &input);
+        friend command &&operator<(command &&cmd, std::string &input);
+        friend command &operator<(command &cmd, std::filesystem::path file_name);
+        friend command &&operator<(command &&cmd, std::filesystem::path file_name);
+
+        friend command &operator>(command &cmd, file_descriptor fd);
+        friend command &&operator>(command &&cmd, file_descriptor fd);
+        friend command &operator>(command &cmd, std::string &output);
+        friend command &&operator>(command &&cmd, std::string &output);
+        friend command &operator>(command &cmd, const std::filesystem::path &file_name);
+        friend command &&operator>(command &&cmd, const std::filesystem::path &file_name);
+
+        friend command &operator>=(command &cmd, file_descriptor fd);
+        friend command &&operator>=(command &&cmd, file_descriptor fd);
+        friend command &operator>=(command &cmd, std::string &output);
+        friend command &&operator>=(command &&cmd, std::string &output);
+        friend command &operator>=(command &cmd, const std::filesystem::path &file_name);
+        friend command &&operator>=(command &&cmd, const std::filesystem::path &file_name);
+
+        friend command &operator>>(command &cmd, file_descriptor fd);
+        friend command &&operator>>(command &&cmd, file_descriptor fd);
+        friend command &operator>>(command &cmd, const std::filesystem::path &file_name);
+        friend command &&operator>>(command &&cmd, const std::filesystem::path &file_name);
+
+        friend command &operator>>=(command &cmd, file_descriptor fd);
+        friend command &&operator>>=(command &&cmd, file_descriptor fd);
+        friend command &operator>>=(command &cmd, const std::filesystem::path &file_name);
+        friend command &&operator>>=(command &&cmd, const std::filesystem::path &file_name);
     };
+
+    command &operator<(command &cmd, file_descriptor fd);
+    command &&operator<(command &&cmd, file_descriptor fd);
+    command &operator<(command &cmd, std::string &input);
+    command &&operator<(command &&cmd, std::string &input);
+    command &operator<(command &cmd, std::filesystem::path file_name);
+    command &&operator<(command &&cmd, std::filesystem::path file_name);
+
+    command &operator>(command &cmd, file_descriptor fd);
+    command &&operator>(command &&cmd, file_descriptor fd);
+    command &operator>(command &cmd, std::string &output);
+    command &&operator>(command &&cmd, std::string &output);
+    command &operator>(command &cmd, const std::filesystem::path &file_name);
+    command &&operator>(command &&cmd, const std::filesystem::path &file_name);
+
+    command &operator>=(command &cmd, file_descriptor fd);
+    command &&operator>=(command &&cmd, file_descriptor fd);
+    command &operator>=(command &cmd, std::string &output);
+    command &&operator>=(command &&cmd, std::string &output);
+    command &operator>=(command &cmd, const std::filesystem::path &file_name);
+    command &&operator>=(command &&cmd, const std::filesystem::path &file_name);
+
+    command &operator>>(command &cmd, file_descriptor fd);
+    command &&operator>>(command &&cmd, file_descriptor fd);
+    command &operator>>(command &cmd, const std::filesystem::path &file_name);
+    command &&operator>>(command &&cmd, const std::filesystem::path &file_name);
+
+    command &operator>>=(command &cmd, file_descriptor fd);
+    command &&operator>>=(command &&cmd, file_descriptor fd);
+    command &operator>>=(command &cmd, const std::filesystem::path &file_name);
+    command &&operator>>=(command &&cmd, const std::filesystem::path &file_name);
+
 }
