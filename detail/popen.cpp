@@ -56,10 +56,7 @@ int popen::execute()
   };
   auto close_if_linked = [](file_descriptor& fd)
   {
-    if (fd.linked())
-    {
-      fd.close();
-    }
+    if (fd.linked()) fd.close();
   };
   if (int pid{::fork()}; pid < 0)
   {

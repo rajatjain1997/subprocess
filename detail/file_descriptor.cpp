@@ -33,10 +33,7 @@ enum standard_filenos
 /*static*/ std::pair<file_descriptor, file_descriptor> file_descriptor::create_pipe()
 {
   int fd[2];
-  if (::pipe(fd) < 0)
-  {
-    throw os_error{"Could not create a pipe!"};
-  }
+  if (::pipe(fd) < 0) throw os_error{"Could not create a pipe!"};
   file_descriptor read_fd{fd[0]};
   file_descriptor write_fd{fd[1]};
   link(read_fd, write_fd);
@@ -58,10 +55,7 @@ file_descriptor& file_descriptor::operator=(file_descriptor&& other) noexcept
 
 file_descriptor::~file_descriptor()
 {
-  if (file_path_ and fd_.use_count() <= 1)
-  {
-    close();
-  }
+  if (file_path_ and fd_.use_count() <= 1) close();
 }
 
 void file_descriptor::close()
@@ -75,10 +69,7 @@ void file_descriptor::close()
 
 void file_descriptor::close_linked()
 {
-  if (linked_fd_)
-  {
-    linked_fd_->close();
-  }
+  if (linked_fd_) linked_fd_->close();
 }
 
 void file_descriptor::dup(const file_descriptor& other) { ::dup2(fd(), other.fd()); }
