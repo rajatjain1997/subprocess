@@ -76,7 +76,7 @@ void file_descriptor::dup(const file_descriptor& other) { ::dup2(fd(), other.fd(
 
 void file_descriptor::write(std::string& input)
 {
-  if (::write(fd(), input.c_str(), input.size()) < input.size())
+  if (::write(fd(), input.c_str(), input.size()) < static_cast<ssize_t>(input.size()))
   {
     throw os_error{"Could not write the input to file_descriptor"};
   }

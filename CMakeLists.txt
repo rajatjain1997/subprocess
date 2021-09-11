@@ -12,8 +12,6 @@ project(
 
 docs_early_return()
 
-option(BUILD_SHARED_LIBS ON)
-
 include(cmake/project-is-top-level.cmake)
 include(cmake/variables.cmake)
 
