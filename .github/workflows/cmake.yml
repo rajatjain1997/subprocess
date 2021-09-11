@@ -99,7 +99,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos, ubuntu, windows]
+        os: [macos, ubuntu]
 
         type: [shared, static]
 
