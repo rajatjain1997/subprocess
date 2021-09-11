@@ -1,3 +1,5 @@
+#pragma once
+
 #include <subprocess/detail/file_descriptor.hpp>
 #include <subprocess/subprocess_export.h>
 #include <filesystem>

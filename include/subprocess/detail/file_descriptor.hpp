@@ -45,9 +45,9 @@ private:
   friend void link(file_descriptor& fd1, file_descriptor& fd2);
 };
 
-file_descriptor in();
-file_descriptor out();
-file_descriptor err();
+SUBPROCESS_EXPORT file_descriptor in();
+SUBPROCESS_EXPORT file_descriptor out();
+SUBPROCESS_EXPORT file_descriptor err();
 
-void link(file_descriptor& fd1, file_descriptor& fd2);
+SUBPROCESS_EXPORT void link(file_descriptor& fd1, file_descriptor& fd2);
 } // namespace subprocess

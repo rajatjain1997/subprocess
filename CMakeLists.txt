@@ -12,13 +12,15 @@ project(
 
 docs_early_return()
 
+option(BUILD_SHARED_LIBS ON)
+
 include(cmake/project-is-top-level.cmake)
 include(cmake/variables.cmake)
 
 # ---- Declare library ----
 
 add_library(
-    subprocess_subprocess SHARED
+    subprocess_subprocess
     source/subprocess.cpp
     source/detail/command.cpp
     source/detail/file_descriptor.cpp
