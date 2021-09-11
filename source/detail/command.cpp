@@ -1,8 +1,4 @@
-#include <subprocess/detail/command.hpp>
-#include <subprocess/detail/exceptions.hpp>
 #include "fcntl.h"
-#include <subprocess/detail/file_descriptor.hpp>
-#include <subprocess/detail/popen.hpp>
 #include <algorithm>
 #include <deque>
 #include <filesystem>
@@ -10,6 +6,10 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <subprocess/detail/command.hpp>
+#include <subprocess/detail/exceptions.hpp>
+#include <subprocess/detail/file_descriptor.hpp>
+#include <subprocess/detail/popen.hpp>
 #include <tuple>
 #include <vector>
 
@@ -92,9 +92,9 @@ int command::run()
 
 command& command::operator|(command&& other)
 {
-  auto [read_fd, write_fd] = file_descriptor::create_pipe();
+  auto [read_fd, write_fd]            = file_descriptor::create_pipe();
   other.pimpl->processes.front().in() = std::move(read_fd);
-  pimpl->processes.back().out() = std::move(write_fd);
+  pimpl->processes.back().out()       = std::move(write_fd);
   std::move(other.pimpl->processes.begin(), other.pimpl->processes.end(),
             std::back_inserter(pimpl->processes));
   pimpl->captured_stdout = std::move(other.pimpl->captured_stdout);

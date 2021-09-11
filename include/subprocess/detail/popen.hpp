@@ -16,7 +16,7 @@ public:
   popen(const popen& other) = delete;
   popen(popen&& other);
   popen& operator=(const popen& other) = delete;
-  popen& operator=(popen&& other);
+  popen& operator                      =(popen&& other);
 
   ~popen();
 

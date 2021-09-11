@@ -1,5 +1,5 @@
-#include <subprocess/subprocess_export.h>
 #include <stdexcept>
+#include <subprocess/subprocess_export.h>
 
 namespace subprocess
 {

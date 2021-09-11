@@ -1,12 +1,12 @@
 #pragma once
 
-#include <subprocess/detail/file_descriptor.hpp>
-#include <subprocess/subprocess_export.h>
 #include <filesystem>
 #include <initializer_list>
 #include <memory>
 #include <new>
 #include <string>
+#include <subprocess/detail/file_descriptor.hpp>
+#include <subprocess/subprocess_export.h>
 
 namespace subprocess
 {
@@ -18,7 +18,7 @@ public:
   command(const command& other) = delete;
   command(command&& other);
   command& operator=(const command& other) = delete;
-  command& operator=(command&& other);
+  command& operator                        =(command&& other);
 
   ~command();
 

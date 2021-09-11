@@ -1,8 +1,8 @@
-#include <subprocess/detail/popen.hpp>
-#include <subprocess/detail/exceptions.hpp>
 #include <algorithm>
 #include <initializer_list>
 #include <stdio.h>
+#include <subprocess/detail/exceptions.hpp>
+#include <subprocess/detail/popen.hpp>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>

@@ -1,5 +1,6 @@
 [codespell]
 builtin = clear,rare,en-GB_to_en-US,names,informal,code
+ignore-words-list = popen,stdio,fd
 check-filenames =
 check-hidden =
 skip = */.git,*/build

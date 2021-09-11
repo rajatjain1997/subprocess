@@ -1,8 +1,8 @@
-#include <subprocess/detail/file_descriptor.hpp>
-#include <subprocess/detail/exceptions.hpp>
 #include <algorithm>
 #include <fcntl.h>
 #include <iostream>
+#include <subprocess/detail/exceptions.hpp>
+#include <subprocess/detail/file_descriptor.hpp>
 #include <unistd.h>
 
 namespace subprocess
@@ -10,8 +10,8 @@ namespace subprocess
 
 enum standard_filenos
 {
-  standard_in = STDIN_FILENO,
-  standard_out = STDOUT_FILENO,
+  standard_in    = STDIN_FILENO,
+  standard_out   = STDOUT_FILENO,
   standard_error = STDERR_FILENO,
   max_standard_fd
 };

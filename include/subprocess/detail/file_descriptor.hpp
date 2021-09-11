@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <tuple>
 #include <subprocess/subprocess_export.h>
+#include <tuple>
 
 namespace subprocess
 {
