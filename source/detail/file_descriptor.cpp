@@ -1,5 +1,5 @@
-#include "file_descriptor.hpp"
-#include "exceptions.hpp"
+#include <subprocess/detail/file_descriptor.hpp>
+#include <subprocess/detail/exceptions.hpp>
 #include <algorithm>
 #include <fcntl.h>
 #include <iostream>

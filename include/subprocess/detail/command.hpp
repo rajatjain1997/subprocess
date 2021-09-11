@@ -1,4 +1,5 @@
-#include "file_descriptor.hpp"
+#include <subprocess/detail/file_descriptor.hpp>
+#include <subprocess/subprocess_export.h>
 #include <filesystem>
 #include <initializer_list>
 #include <memory>
@@ -7,7 +8,7 @@
 
 namespace subprocess
 {
-class command
+class SUBPROCESS_EXPORT command
 {
 public:
   command(std::initializer_list<const char*> cmd);
@@ -21,12 +22,12 @@ public:
 
   int run();
 
-  int run(std::nothrow_t) noexcept;
+  int run(std::nothrow_t);
 
   command& operator|(command&& other);
 
 private:
-  struct PrivateImpl;
+  struct SUBPROCESS_NO_EXPORT PrivateImpl;
   std::unique_ptr<PrivateImpl> pimpl;
 
   friend command& operator<(command& cmd, file_descriptor fd);
@@ -61,35 +62,35 @@ private:
   friend command&& operator>>=(command&& cmd, const std::filesystem::path& file_name);
 };
 
-command& operator<(command& cmd, file_descriptor fd);
-command&& operator<(command&& cmd, file_descriptor fd);
-command& operator<(command& cmd, std::string& input);
-command&& operator<(command&& cmd, std::string& input);
-command& operator<(command& cmd, std::filesystem::path file_name);
-command&& operator<(command&& cmd, std::filesystem::path file_name);
+SUBPROCESS_EXPORT command& operator<(command& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command&& operator<(command&& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command& operator<(command& cmd, std::string& input);
+SUBPROCESS_EXPORT command&& operator<(command&& cmd, std::string& input);
+SUBPROCESS_EXPORT command& operator<(command& cmd, std::filesystem::path file_name);
+SUBPROCESS_EXPORT command&& operator<(command&& cmd, std::filesystem::path file_name);
 
-command& operator>(command& cmd, file_descriptor fd);
-command&& operator>(command&& cmd, file_descriptor fd);
-command& operator>(command& cmd, std::string& output);
-command&& operator>(command&& cmd, std::string& output);
-command& operator>(command& cmd, const std::filesystem::path& file_name);
-command&& operator>(command&& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command& operator>(command& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command&& operator>(command&& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command& operator>(command& cmd, std::string& output);
+SUBPROCESS_EXPORT command&& operator>(command&& cmd, std::string& output);
+SUBPROCESS_EXPORT command& operator>(command& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command&& operator>(command&& cmd, const std::filesystem::path& file_name);
 
-command& operator>=(command& cmd, file_descriptor fd);
-command&& operator>=(command&& cmd, file_descriptor fd);
-command& operator>=(command& cmd, std::string& output);
-command&& operator>=(command&& cmd, std::string& output);
-command& operator>=(command& cmd, const std::filesystem::path& file_name);
-command&& operator>=(command&& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command& operator>=(command& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command&& operator>=(command&& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command& operator>=(command& cmd, std::string& output);
+SUBPROCESS_EXPORT command&& operator>=(command&& cmd, std::string& output);
+SUBPROCESS_EXPORT command& operator>=(command& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command&& operator>=(command&& cmd, const std::filesystem::path& file_name);
 
-command& operator>>(command& cmd, file_descriptor fd);
-command&& operator>>(command&& cmd, file_descriptor fd);
-command& operator>>(command& cmd, const std::filesystem::path& file_name);
-command&& operator>>(command&& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command& operator>>(command& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command&& operator>>(command&& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command& operator>>(command& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command&& operator>>(command&& cmd, const std::filesystem::path& file_name);
 
-command& operator>>=(command& cmd, file_descriptor fd);
-command&& operator>>=(command&& cmd, file_descriptor fd);
-command& operator>>=(command& cmd, const std::filesystem::path& file_name);
-command&& operator>>=(command&& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command& operator>>=(command& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command&& operator>>=(command&& cmd, file_descriptor fd);
+SUBPROCESS_EXPORT command& operator>>=(command& cmd, const std::filesystem::path& file_name);
+SUBPROCESS_EXPORT command&& operator>>=(command&& cmd, const std::filesystem::path& file_name);
 
 } // namespace subprocess

@@ -3,11 +3,12 @@
 #include "file_descriptor.hpp"
 #include <initializer_list>
 #include <memory>
+#include <subprocess/subprocess_export.h>
 
 namespace subprocess
 {
 
-class popen
+class SUBPROCESS_EXPORT popen
 {
 
 public:

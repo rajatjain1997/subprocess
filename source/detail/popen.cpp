@@ -1,5 +1,5 @@
-#include "popen.hpp"
-#include "exceptions.hpp"
+#include <subprocess/detail/popen.hpp>
+#include <subprocess/detail/exceptions.hpp>
 #include <algorithm>
 #include <initializer_list>
 #include <stdio.h>

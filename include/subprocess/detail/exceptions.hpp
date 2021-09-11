@@ -1,29 +1,30 @@
+#include <subprocess/subprocess_export.h>
 #include <stdexcept>
 
 namespace subprocess
 {
-class subprocess_error : public std::runtime_error
+class SUBPROCESS_EXPORT subprocess_error : public std::runtime_error
 {
 public:
   explicit subprocess_error(const std::string& str) : runtime_error(str) {}
   explicit subprocess_error(const char* str) : runtime_error(str) {}
 };
 
-class os_error : public subprocess_error
+class SUBPROCESS_EXPORT os_error : public subprocess_error
 {
 public:
   explicit os_error(const std::string& str) : subprocess_error(str) {}
   explicit os_error(const char* str) : subprocess_error(str) {}
 };
 
-class usage_error : public subprocess_error
+class SUBPROCESS_EXPORT usage_error : public subprocess_error
 {
 public:
   explicit usage_error(const std::string& str) : subprocess_error(str) {}
   explicit usage_error(const char* str) : subprocess_error(str) {}
 };
 
-class command_error : public subprocess_error
+class SUBPROCESS_EXPORT command_error : public subprocess_error
 {
   int return_code_;
 

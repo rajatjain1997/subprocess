@@ -1,8 +1,8 @@
-#include "command.hpp"
-#include "exceptions.hpp"
+#include <subprocess/detail/command.hpp>
+#include <subprocess/detail/exceptions.hpp>
 #include "fcntl.h"
-#include "file_descriptor.hpp"
-#include "popen.hpp"
+#include <subprocess/detail/file_descriptor.hpp>
+#include <subprocess/detail/popen.hpp>
 #include <algorithm>
 #include <deque>
 #include <filesystem>
@@ -76,7 +76,7 @@ command& command::operator=(command&& other)
 
 command::~command() {}
 
-int command::run(std::nothrow_t) noexcept { return pimpl->run(); }
+int command::run(std::nothrow_t) { return pimpl->run(); }
 
 int command::run()
 {

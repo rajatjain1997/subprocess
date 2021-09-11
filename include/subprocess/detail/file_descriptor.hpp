@@ -4,10 +4,11 @@
 #include <memory>
 #include <optional>
 #include <tuple>
+#include <subprocess/subprocess_export.h>
 
 namespace subprocess
 {
-class file_descriptor
+class SUBPROCESS_EXPORT file_descriptor
 {
 public:
   static file_descriptor open(std::filesystem::path file_name, int flags);
