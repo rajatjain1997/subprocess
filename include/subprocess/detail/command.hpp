@@ -31,7 +31,6 @@ public:
 
   ~command();
 
-
   /**
    * @brief Runs the command pipeline and throws on error.
    *
@@ -57,7 +56,6 @@ public:
    * @return int Return code from the pipeline
    */
   int run(std::nothrow_t);
-
 
   /**
    * @brief Chains a command object to the current one.
