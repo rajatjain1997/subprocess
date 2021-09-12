@@ -34,7 +34,7 @@ public:
 };
 
 /**
- * @brief Thrown when there is an errror in the usage of the library's public interface
+ * @brief Thrown when there is an error in the usage of the library's public interface
  *
  * These errors should be infrequent on the user end.
  * They get thrown whenever an erroneous call is made to a function within the
