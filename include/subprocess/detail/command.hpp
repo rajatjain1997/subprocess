@@ -10,6 +10,15 @@
 
 namespace subprocess
 {
+
+/**
+ * @brief Main interface class for subprocess library
+ *
+ * A class that contains a list of linked shell commands and is responsible
+ * for managing their file descriptors such that their input and output can
+ * be chained to other commands.
+ *
+ */
 class SUBPROCESS_EXPORT command
 {
 public:
