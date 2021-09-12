@@ -8,7 +8,7 @@
 namespace subprocess
 {
 
-class SUBPROCESS_EXPORT popen
+class popen
 {
 
 public:

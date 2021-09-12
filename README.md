@@ -1,6 +1,12 @@
 # subprocess
 
-There are many C++ subprocessing libraries out there, but none of them *just* work. The aim of this library is to allow you to write shell commands in C++ *almost* as if you were writing them in shell. 
+![cppver](https://img.shields.io/badge/C%2B%2B-17-blue)
+![build](https://github.com/rajatjain1997/subprocess/actions/workflows/cmake.yml/badge.svg?branch=master)
+[![issues](https://img.shields.io/github/issues/rajatjain1997/subprocess)](https://github.com/rajatjain1997/subprocess/issues)
+![GitHub](https://img.shields.io/github/license/rajatjain1997/subprocess)
+![stars](https://img.shields.io/github/stars/rajatjain1997/subprocess?style=social)
+
+There are many C++ subprocessing libraries out there, but none of them *just* work. The aim of this library is to allow you to write shell commands in C++ *almost* as if you were writing them in shell.
 
 Full documentation for `subprocess` is available [here](https://subprocess.thecodepad.com).
 
@@ -32,7 +38,7 @@ You can write shell commands using the `subprocess::command` class and use the r
 
     // Running a command
     subprocess::command cmd{"touch", file_path}.run();
-    
+
     // Piping the output of a command to another command
     cmd | subprocess::command{"uniq"};
 
