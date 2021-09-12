@@ -72,6 +72,7 @@ public:
    * @return command&
    */
   command& operator|(command&& other);
+  command& operator|(std::string other);
 
 private:
   struct SUBPROCESS_NO_EXPORT PrivateImpl;

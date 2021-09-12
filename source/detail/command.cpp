@@ -95,6 +95,8 @@ command& command::operator|(command&& other)
   return *this;
 }
 
+command& command::operator|(std::string other) { return *this | command{std::move(other)}; }
+
 command& operator>(command& cmd, file_descriptor fd)
 {
   cmd.pimpl->captured_stdout.reset();
