@@ -3,7 +3,6 @@
 #include <deque>
 #include <filesystem>
 #include <functional>
-#include <initializer_list>
 #include <optional>
 #include <string>
 #include <subprocess/detail/command.hpp>
@@ -23,10 +22,7 @@ struct command::PrivateImpl
       captured_stderr;
 
   PrivateImpl() {}
-  PrivateImpl(std::initializer_list<const char*> cmd)
-  {
-    processes.push_back(subprocess::popen{std::move(cmd)});
-  }
+  PrivateImpl(std::string cmd) { processes.push_back(subprocess::popen{std::move(cmd)}); }
 
   int run();
 };
@@ -57,10 +53,7 @@ int command::PrivateImpl::run()
   return WEXITSTATUS(waitstatus);
 }
 
-command::command(std::initializer_list<const char*> cmd)
-    : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))}
-{
-}
+command::command(std::string cmd) : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))} {}
 
 command::command(command&& other)
 {

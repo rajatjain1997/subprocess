@@ -1,8 +1,9 @@
 #include <algorithm>
-#include <initializer_list>
+#include <optional>
 #include <stdio.h>
 #include <subprocess/detail/exceptions.hpp>
 #include <subprocess/detail/popen.hpp>
+#include <subprocess/detail/shell_expander.hpp>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -13,27 +14,23 @@ namespace subprocess
 
 struct popen::PrivateImpl
 {
-  std::vector<const char*> cmd_;
+  std::string cmd_;
   file_descriptor stdin_fd{subprocess::in()}, stdout_fd{subprocess::out()}, stderr_fd{subprocess::err()};
   std::optional<int> pid_;
 
   PrivateImpl() {}
 
-  PrivateImpl(std::initializer_list<const char*> cmd)
-  {
-    cmd_.reserve(cmd.size() + 1);
-    std::copy(cmd.begin(), cmd.end(), std::back_inserter(cmd_));
-    cmd_.push_back(NULL);
-  }
+  PrivateImpl(std::string cmd) : cmd_{std::move(cmd)} {}
 };
 
-popen::popen(std::initializer_list<const char*> cmd) : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))} {}
+popen::popen(std::string cmd) : pimpl{std::make_unique<PrivateImpl>(std::move(cmd))} {}
 
 popen::popen(popen&& other)
 {
   pimpl.reset();
   pimpl.swap(other.pimpl);
 };
+
 popen& popen::operator=(popen&& other)
 {
   pimpl.swap(other.pimpl);
@@ -54,6 +51,9 @@ void popen::execute()
   {
     if (fd.linked()) fd.close();
   };
+
+  shell_expander sh{pimpl->cmd_};
+
   if (int pid{::fork()}; pid < 0)
   {
     throw os_error{"Failed to fork process"};
@@ -63,7 +63,7 @@ void popen::execute()
     dup_and_close(pimpl->stdin_fd, {STDIN_FILENO});
     dup_and_close(pimpl->stdout_fd, {STDOUT_FILENO});
     dup_and_close(pimpl->stderr_fd, {STDERR_FILENO});
-    exit(::execvp(pimpl->cmd_[0], const_cast<char* const*>(&(pimpl->cmd_[0]))));
+    exit(::execvp(sh.argv()[0], sh.argv()));
   }
   else
   {

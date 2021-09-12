@@ -1,7 +1,6 @@
 #pragma once
 
 #include "file_descriptor.hpp"
-#include <initializer_list>
 #include <memory>
 #include <subprocess/subprocess_export.h>
 
@@ -12,7 +11,7 @@ class popen
 {
 
 public:
-  popen(std::initializer_list<const char*> cmd);
+  popen(std::string cmd);
   popen(const popen& other) = delete;
   popen(popen&& other);
   popen& operator=(const popen& other) = delete;

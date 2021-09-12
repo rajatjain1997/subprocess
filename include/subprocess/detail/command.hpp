@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <initializer_list>
 #include <memory>
 #include <new>
 #include <string>
@@ -22,7 +21,7 @@ namespace subprocess
 class SUBPROCESS_EXPORT command
 {
 public:
-  command(std::initializer_list<const char*> cmd);
+  command(std::string cmd);
 
   command(const command& other) = delete;
   command(command&& other);
@@ -140,5 +139,10 @@ SUBPROCESS_EXPORT command& operator>>=(command& cmd, file_descriptor fd);
 SUBPROCESS_EXPORT command&& operator>>=(command&& cmd, file_descriptor fd);
 SUBPROCESS_EXPORT command& operator>>=(command& cmd, const std::filesystem::path& file_name);
 SUBPROCESS_EXPORT command&& operator>>=(command&& cmd, const std::filesystem::path& file_name);
+
+namespace literals
+{
+SUBPROCESS_EXPORT command operator""_cmd(const char* cmd, size_t) { return command{cmd}; }
+} // namespace literals
 
 } // namespace subprocess

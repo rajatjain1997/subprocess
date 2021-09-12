@@ -23,6 +23,7 @@ add_library(
     source/detail/command.cpp
     source/detail/file_descriptor.cpp
     source/detail/popen.cpp
+    source/detail/shell_expander.cpp
 )
 add_library(subprocess::subprocess ALIAS subprocess_subprocess)
 
