@@ -15,16 +15,18 @@ Full documentation for `subprocess` is available [here](https://subprocess.theco
 
 It works exactly how you would expect it to work.
 
-    #include <subprocess.hpp>
+```cpp
+#include <subprocess.hpp>
 
-    using subprocess::command;
+using subprocess::command;
 
-    int main(int argc, char* argv[])
-    {
-        std::string owners;
-        (command{"ls", "-l", argv[1]} | command{"awk", "NR>1{print $3}"} | command{"sort"} | command{"uniq"} > owners).run();
-        // Use the owners as you wish
-    }
+int main(int argc, char* argv[])
+{
+    std::string owners;
+    (command{"ls", "-l", argv[1]} | command{"awk", "NR>1{print $3}"} | command{"sort"} | command{"uniq"} > owners).run();
+    // Use the owners as you wish
+}
+```
 
 ## Philosophy
 
@@ -36,11 +38,13 @@ You can write shell commands using the `subprocess::command` class and use the r
 
 **Examples:**
 
-    // Running a command
-    subprocess::command cmd{"touch", file_path}.run();
+```cpp
+// Running a command
+subprocess::command cmd{"touch", file_path}.run();
 
-    // Piping the output of a command to another command
-    cmd | subprocess::command{"uniq"};
+// Piping the output of a command to another command
+cmd | subprocess::command{"uniq"};
+```
 
 ### Redirecting stdin
 
@@ -48,16 +52,18 @@ You can use `operator<` to redirect stdin to the command object.
 
 **Examples:**
 
-    // Reading input from a file
-    cmd < std::filesystem::path{file_name};
-    cmd < "file_name";
+```cpp
+// Reading input from a file
+cmd < std::filesystem::path{file_name};
+cmd < "file_name";
 
-    // Reading input from a variable
-    std::string input{"abc"};
-    cmd < input;
+// Reading input from a variable
+std::string input{"abc"};
+cmd < input;
 
-    // Reading from an already created fd
-    cmd < subprocess::file_descriptor{fd_no};
+// Reading from an already created fd
+cmd < subprocess::file_descriptor{fd_no};
+```
 
 ### Redirecting stdout
 
@@ -68,18 +74,20 @@ The following operators are available for redirecting stdout:
 
 **Examples:**
 
-    // Redirecting stdout to stderr
-    cmd > subprocess::err();
+```cpp
+// Redirecting stdout to stderr
+cmd > subprocess::err();
 
-    // Redirecting stdout to a file
-    cmd > std::filesystem::path{file_name};
+// Redirecting stdout to a file
+cmd > std::filesystem::path{file_name};
 
-    // or appending to a file
-    cmd >> std::filesystem::path{file_name};
+// or appending to a file
+cmd >> std::filesystem::path{file_name};
 
-    // Capturing stdout in a variable
-    std::string var_name;
-    cmd > var_name;
+// Capturing stdout in a variable
+std::string var_name;
+cmd > var_name;
+```
 
 ### Redirecting stderr
 
@@ -90,18 +98,20 @@ The following operators are available for redirecting stdout:
 
 **Examples:**
 
-    // Redirecting stderr to stdout
-    cmd >= subprocess::err();
+```cpp
+// Redirecting stderr to stdout
+cmd >= subprocess::err();
 
-    // Redirecting stderr to a file
-    cmd >= std::filesystem::path{file_name};
+// Redirecting stderr to a file
+cmd >= std::filesystem::path{file_name};
 
-    // or appending to a file
-    cmd >>= std::filesystem::path{file_name};
+// or appending to a file
+cmd >>= std::filesystem::path{file_name};
 
-    // Capturing stderr in a variable
-    std::string var_name;
-    cmd >= var_name;
+// Capturing stderr in a variable
+std::string var_name;
+cmd >= var_name;
+```
 
 ## Conclusion
 
