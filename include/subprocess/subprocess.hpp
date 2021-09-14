@@ -4,6 +4,7 @@
 #include <deque>
 #include <filesystem>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <new>
 #include <optional>
@@ -162,7 +163,7 @@ using descriptor_ptr_t = std::unique_ptr<descriptor>;
 
 template <typename T, typename... Args> std::unique_ptr<T> make_descriptor(Args&&... args)
 {
-  return std::make_unique<T>(std::move(args)...);
+  return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 class odescriptor : public virtual descriptor
@@ -214,12 +215,16 @@ public:
 class ofile_descriptor : public virtual odescriptor, public virtual file_descriptor
 {
 public:
+  using file_descriptor::closable;
+  using file_descriptor::close;
   ofile_descriptor(std::filesystem::path path, int mode) : file_descriptor{std::move(path), mode} {}
 };
 
 class ifile_descriptor : public virtual idescriptor, public virtual file_descriptor
 {
 public:
+  using file_descriptor::closable;
+  using file_descriptor::close;
   ifile_descriptor(std::filesystem::path path, int mode) : file_descriptor{std::move(path), mode} {}
 };
 
@@ -231,7 +236,7 @@ public:
   opipe_descriptor() {}
   virtual void open() override;
 
-private:
+protected:
   ipipe_descriptor* linked_fd_{nullptr};
   friend class ipipe_descriptor;
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
@@ -243,10 +248,35 @@ public:
   ipipe_descriptor() {}
   virtual void open() override;
 
-private:
+protected:
   opipe_descriptor* linked_fd_{nullptr};
   friend class opipe_descriptor;
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
+};
+
+class ovariable_descriptor : public virtual opipe_descriptor
+{
+public:
+  ovariable_descriptor(std::string& output_var) : output_{output_var} { linked_fd_ = &input_pipe_; }
+
+  virtual void close() override;
+  virtual void read();
+
+private:
+  std::string& output_;
+  ipipe_descriptor input_pipe_;
+};
+class ivariable_descriptor : public virtual ipipe_descriptor
+{
+public:
+  ivariable_descriptor(std::string input_data) : input_{input_data} { linked_fd_ = &output_pipe; }
+
+  virtual void open() override;
+  virtual void write();
+
+private:
+  std::string input_;
+  opipe_descriptor output_pipe;
 };
 
 void opipe_descriptor::open()
@@ -272,6 +302,24 @@ void ipipe_descriptor::open()
   fd_             = fd[0];
   linked_fd_->fd_ = fd[1];
 }
+
+void ovariable_descriptor::close()
+{
+  opipe_descriptor::close();
+  read();
+  input_pipe_.close();
+}
+
+void ovariable_descriptor::read() { output_ = input_pipe_.read(); }
+
+void ivariable_descriptor::open()
+{
+  ipipe_descriptor::open();
+  write();
+  output_pipe.close();
+}
+
+void ivariable_descriptor::write() { output_pipe.write(input_); }
 
 enum class standard_filenos
 {
@@ -517,7 +565,6 @@ public:
 
 private:
   std::deque<process> processes;
-  std::optional<std::pair<idescriptor, std::reference_wrapper<std::string>>> captured_stdout, captured_stderr;
 
   friend command& operator<(command& cmd, descriptor_ptr_t fd);
   friend command&& operator<(command&& cmd, descriptor_ptr_t fd);
@@ -553,22 +600,10 @@ private:
 
 int command::run(std::nothrow_t)
 {
-  auto capture_stream = [](auto& optional_stream_pair)
-  {
-    if (optional_stream_pair)
-    {
-      std::string& output{optional_stream_pair->second.get()};
-      output.clear();
-      output = std::move(optional_stream_pair->first.read());
-      optional_stream_pair->first.close();
-    }
-  };
   for (auto& process : processes)
   {
     process.execute();
   }
-  capture_stream(captured_stdout);
-  capture_stream(captured_stderr);
   int waitstatus;
   for (auto& process : processes)
   {
@@ -595,8 +630,6 @@ command& command::operator|(command&& other)
   other.processes.front().in(std::move(read_fd));
   processes.back().out(std::move(write_fd));
   std::move(other.processes.begin(), other.processes.end(), std::back_inserter(processes));
-  captured_stdout = std::move(other.captured_stdout);
-  captured_stderr = std::move(other.captured_stderr);
   return *this;
 }
 
@@ -604,7 +637,6 @@ command& command::operator|(std::string other) { return *this | command{std::mov
 
 command& operator>(command& cmd, descriptor_ptr_t fd)
 {
-  cmd.captured_stdout.reset();
   cmd.processes.back().out(std::move(fd));
   return cmd;
 }
@@ -625,30 +657,20 @@ command& operator<(command& cmd, descriptor_ptr_t fd)
   return cmd;
 }
 
-// command& operator>=(command& cmd, std::string& output)
-// {
-//   auto [read_fd, write_fd] = create_pipe();
-//   cmd > std::move(write_fd);
-//   cmd.captured_stderr = {std::move(read_fd), output};
-//   return cmd;
-// }
+command& operator>=(command& cmd, std::string& output)
+{
+  return cmd >= make_descriptor<ovariable_descriptor>(output);
+}
 
-// command& operator>(command& cmd, std::string& output)
-// {
-//   auto [read_fd, write_fd] = create_pipe();
-//   cmd > std::move(write_fd);
-//   cmd.captured_stdout = {std::move(read_fd), output};
-//   return cmd;
-// }
+command& operator>(command& cmd, std::string& output)
+{
+  return cmd > make_descriptor<ovariable_descriptor>(output);
+}
 
-// command& operator<(command& cmd, std::string& input)
-// {
-//   auto [read_fd, write_fd] = create_pipe();
-//   cmd < std::move(read_fd);
-//   write_fd->write(input);
-//   write_fd->close();
-//   return cmd;
-// }
+command& operator<(command& cmd, std::string& input)
+{
+  return cmd < make_descriptor<ivariable_descriptor>(input);
+}
 
 command& operator>(command& cmd, const std::filesystem::path& file_name)
 {
