@@ -11,7 +11,6 @@ set(package subprocess)
 install(
     DIRECTORY
     include/
-    "${PROJECT_BINARY_DIR}/export/"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT subprocess_Development
 )

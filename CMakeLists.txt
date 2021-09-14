@@ -18,49 +18,16 @@ include(cmake/variables.cmake)
 # ---- Declare library ----
 
 add_library(
-    subprocess_subprocess
-    source/subprocess.cpp
-    source/detail/command.cpp
-    source/detail/file_descriptor.cpp
-    source/detail/popen.cpp
-)
+    subprocess_subprocess INTERFACE)
 add_library(subprocess::subprocess ALIAS subprocess_subprocess)
-
-include(GenerateExportHeader)
-generate_export_header(
-    subprocess_subprocess
-    BASE_NAME subprocess
-    EXPORT_FILE_NAME export/subprocess/subprocess_export.h
-    CUSTOM_CONTENT_FROM_VARIABLE pragma_suppress_c4251
-)
-
-if(NOT BUILD_SHARED_LIBS)
-  target_compile_definitions(subprocess_subprocess PUBLIC SUBPROCESS_STATIC_DEFINE)
-endif()
-
-set_target_properties(
-    subprocess_subprocess PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    VERSION "${PROJECT_VERSION}"
-    SOVERSION "${PROJECT_VERSION_MAJOR}"
-    EXPORT_NAME subprocess
-    OUTPUT_NAME subprocess
-)
 
 target_include_directories(
     subprocess_subprocess ${subprocess_warning_guard}
-    PUBLIC
+    INTERFACE
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
-target_include_directories(
-    subprocess_subprocess SYSTEM
-    PUBLIC
-    "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/export>"
-)
-
-target_compile_features(subprocess_subprocess PUBLIC cxx_std_17)
+target_compile_features(subprocess_subprocess INTERFACE cxx_std_17)
 
 # ---- Install rules ----
 
