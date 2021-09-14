@@ -15,6 +15,7 @@
 extern "C"
 {
 #include <fcntl.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -187,6 +188,8 @@ public:
    */
   std::string read();
 
+  descriptor* linked_fd_{nullptr};
+
 private:
   descriptor(int fd, std::optional<std::filesystem::path> file_path) : descriptor(fd)
   {
@@ -194,7 +197,6 @@ private:
   }
   std::optional<std::filesystem::path> file_path_;
   int fd_;
-  descriptor* linked_fd_{nullptr};
   friend void link(descriptor& fd1, descriptor& fd2);
 };
 
@@ -349,11 +351,12 @@ private:
 
 void posix_process::execute()
 {
-  auto dup_and_close = [](descriptor& fd, const descriptor& dup_to)
+  auto dup_and_close = [](posix_spawn_file_actions_t* action, descriptor& fd, const descriptor& dup_to)
   {
-    fd.dup(dup_to);
-    fd.close();
-    fd.close_linked();
+    posix_spawn_file_actions_adddup2(action, fd.fd(), dup_to.fd());
+    if (fd.fd() >= static_cast<int>(standard_filenos::max_standard_fd))
+      posix_spawn_file_actions_addclose(action, fd.fd());
+    if (fd.linked()) posix_spawn_file_actions_addclose(action, fd.linked_fd_->fd());
   };
   auto close_if_linked = [](descriptor& fd)
   {
@@ -361,25 +364,21 @@ void posix_process::execute()
   };
 
   shell_expander sh{cmd_};
+  posix_spawn_file_actions_t action;
 
-  if (int pid{::fork()}; pid < 0)
+  posix_spawn_file_actions_init(&action);
+  dup_and_close(&action, stdin_fd, {STDIN_FILENO});
+  dup_and_close(&action, stdout_fd, {STDOUT_FILENO});
+  dup_and_close(&action, stderr_fd, {STDERR_FILENO});
+  int pid;
+  if (::posix_spawnp(&pid, sh.argv()[0], &action, NULL, sh.argv(), NULL))
   {
-    throw exceptions::os_error{"Failed to fork process"};
+    throw exceptions::os_error{"Failed to spawn process"};
   }
-  else if (pid == 0)
-  {
-    dup_and_close(stdin_fd, {STDIN_FILENO});
-    dup_and_close(stdout_fd, {STDOUT_FILENO});
-    dup_and_close(stderr_fd, {STDERR_FILENO});
-    exit(::execvp(sh.argv()[0], sh.argv()));
-  }
-  else
-  {
-    close_if_linked(stdin_fd);
-    close_if_linked(stdout_fd);
-    close_if_linked(stderr_fd);
-    pid_ = pid;
-  }
+  pid_ = pid;
+  close_if_linked(stdin_fd);
+  close_if_linked(stdout_fd);
+  close_if_linked(stderr_fd);
 }
 
 int posix_process::wait()
