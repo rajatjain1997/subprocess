@@ -102,6 +102,16 @@ public:
 };
 } // namespace exceptions
 
+namespace posix_util
+{
+
+enum class standard_filenos
+{
+  standard_in    = STDIN_FILENO,
+  standard_out   = STDOUT_FILENO,
+  standard_error = STDERR_FILENO,
+  max_standard_fd
+};
 class shell_expander
 {
 public:
@@ -117,6 +127,8 @@ private:
 shell_expander::shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args, 0); }
 shell_expander::~shell_expander() { ::wordfree(&parsed_args); }
 
+} // namespace posix_util
+
 /**
  * @brief Abstracts file descriptors
  *
@@ -131,15 +143,6 @@ shell_expander::~shell_expander() { ::wordfree(&parsed_args); }
 class descriptor
 {
 public:
-  /**
-   * @brief Opens a file and returns a descriptor object
-   *
-   * @param file_name Name of the file to open
-   * @param flags Flags with which to open the file
-   * @return descriptor FD representing the opened file
-   */
-  static auto open(std::filesystem::path file_name, int flags);
-
   descriptor(int fd = -1) : fd_{fd} {}
   virtual ~descriptor() {}
 
@@ -183,6 +186,23 @@ private:
   bool closed_{false};
 };
 
+void odescriptor::write(std::string& input)
+{
+  if (::write(fd(), input.c_str(), input.size()) < static_cast<ssize_t>(input.size()))
+  {
+    throw exceptions::os_error{"Could not write the input to descriptor"};
+  }
+}
+
+void odescriptor::close()
+{
+  if (not closed_)
+  {
+    ::close(fd());
+    closed_ = true;
+  }
+}
+
 class idescriptor : public virtual descriptor
 {
 public:
@@ -200,6 +220,27 @@ private:
   bool closed_{false};
 };
 
+void idescriptor::close()
+{
+  if (not closed_)
+  {
+    ::close(fd());
+    closed_ = true;
+  }
+}
+
+std::string idescriptor::read()
+{
+  static char buf[2048];
+  static std::string output;
+  output.clear();
+  while (::read(fd(), buf, 2048) > 0)
+  {
+    output.append(buf);
+  }
+  return output;
+}
+
 class file_descriptor : public virtual descriptor
 {
 public:
@@ -211,6 +252,18 @@ public:
   std::filesystem::path path_;
   int mode_;
 };
+
+void file_descriptor::open()
+{
+  if (int fd{::open(path_.c_str(), mode_)}; fd < 0)
+  {
+    throw exceptions::os_error{"Failed to open file " + path_.string()};
+  }
+  else
+  {
+    fd_ = fd;
+  }
+}
 
 class ofile_descriptor : public virtual odescriptor, public virtual file_descriptor
 {
@@ -242,43 +295,6 @@ protected:
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
 };
 
-class ipipe_descriptor : public virtual idescriptor
-{
-public:
-  ipipe_descriptor() {}
-  virtual void open() override;
-
-protected:
-  opipe_descriptor* linked_fd_{nullptr};
-  friend class opipe_descriptor;
-  friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
-};
-
-class ovariable_descriptor : public virtual opipe_descriptor
-{
-public:
-  ovariable_descriptor(std::string& output_var) : output_{output_var} { linked_fd_ = &input_pipe_; }
-
-  virtual void close() override;
-  virtual void read();
-
-private:
-  std::string& output_;
-  ipipe_descriptor input_pipe_;
-};
-class ivariable_descriptor : public virtual ipipe_descriptor
-{
-public:
-  ivariable_descriptor(std::string input_data) : input_{input_data} { linked_fd_ = &output_pipe; }
-
-  virtual void open() override;
-  virtual void write();
-
-private:
-  std::string input_;
-  opipe_descriptor output_pipe;
-};
-
 void opipe_descriptor::open()
 {
   if (fd() > 0)
@@ -290,6 +306,18 @@ void opipe_descriptor::open()
   linked_fd_->fd_ = fd[0];
   fd_             = fd[1];
 }
+
+class ipipe_descriptor : public virtual idescriptor
+{
+public:
+  ipipe_descriptor() {}
+  virtual void open() override;
+
+protected:
+  opipe_descriptor* linked_fd_{nullptr};
+  friend class opipe_descriptor;
+  friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
+};
 
 void ipipe_descriptor::open()
 {
@@ -303,60 +331,43 @@ void ipipe_descriptor::open()
   linked_fd_->fd_ = fd[1];
 }
 
+class ovariable_descriptor : public virtual opipe_descriptor
+{
+public:
+  ovariable_descriptor(std::string& output_var) : output_{output_var} { linked_fd_ = &input_pipe_; }
+
+  virtual void close() override;
+  virtual void read() { output_ = input_pipe_.read(); }
+
+private:
+  std::string& output_;
+  ipipe_descriptor input_pipe_;
+};
+
 void ovariable_descriptor::close()
 {
   opipe_descriptor::close();
   read();
   input_pipe_.close();
 }
+class ivariable_descriptor : public virtual ipipe_descriptor
+{
+public:
+  ivariable_descriptor(std::string input_data) : input_{input_data} { linked_fd_ = &output_pipe; }
 
-void ovariable_descriptor::read() { output_ = input_pipe_.read(); }
+  virtual void open() override;
+  virtual void write() { output_pipe.write(input_); }
+
+private:
+  std::string input_;
+  opipe_descriptor output_pipe;
+};
 
 void ivariable_descriptor::open()
 {
   ipipe_descriptor::open();
   write();
   output_pipe.close();
-}
-
-void ivariable_descriptor::write() { output_pipe.write(input_); }
-
-enum class standard_filenos
-{
-  standard_in    = STDIN_FILENO,
-  standard_out   = STDOUT_FILENO,
-  standard_error = STDERR_FILENO,
-  max_standard_fd
-};
-
-void file_descriptor::open()
-{
-  if (int fd{::open(path_.c_str(), mode_)}; fd < 0)
-  {
-    throw exceptions::os_error{"Failed to open file " + path_.string()};
-  }
-  else
-  {
-    fd_ = fd;
-  }
-}
-
-void idescriptor::close()
-{
-  if (not closed_)
-  {
-    ::close(fd());
-    closed_ = true;
-  }
-}
-
-void odescriptor::close()
-{
-  if (not closed_)
-  {
-    ::close(fd());
-    closed_ = true;
-  }
 }
 
 /**
@@ -372,44 +383,33 @@ std::pair<std::unique_ptr<ipipe_descriptor>, std::unique_ptr<opipe_descriptor>> 
   return std::pair{std::move(read_fd), std::move(write_fd)};
 }
 
-void odescriptor::write(std::string& input)
-{
-  if (::write(fd(), input.c_str(), input.size()) < static_cast<ssize_t>(input.size()))
-  {
-    throw exceptions::os_error{"Could not write the input to descriptor"};
-  }
-}
-
-std::string idescriptor::read()
-{
-  static char buf[2048];
-  static std::string output;
-  output.clear();
-  while (::read(fd(), buf, 2048) > 0)
-  {
-    output.append(buf);
-  }
-  return output;
-}
-
 /**
  * @brief Returns an abstraction of stdout file descriptor
  *
  * @return descriptor stdout
  */
-auto in() { return make_descriptor<descriptor>(static_cast<int>(standard_filenos::standard_in)); };
+auto in()
+{
+  return make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_in));
+};
 /**
  * @brief Returns an abstraction of stdin file descriptor
  *
  * @return descriptor stdin
  */
-auto out() { return make_descriptor<descriptor>(static_cast<int>(standard_filenos::standard_out)); };
+auto out()
+{
+  return make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_out));
+};
 /**
  * @brief Returns an abstraction of stderr file descriptor
  *
  * @return descriptor stderr
  */
-auto err() { return make_descriptor<descriptor>(static_cast<int>(standard_filenos::standard_error)); };
+auto err()
+{
+  return make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_error));
+};
 
 /**
  * @brief Links two file descriptors
@@ -475,7 +475,7 @@ void posix_process::execute()
     if (fd->closable()) posix_spawn_file_actions_addclose(action, fd->fd());
   };
 
-  shell_expander sh{cmd_};
+  posix_util::shell_expander sh{cmd_};
   posix_spawn_file_actions_t action;
 
   posix_spawn_file_actions_init(&action);
