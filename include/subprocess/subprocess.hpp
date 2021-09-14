@@ -112,11 +112,24 @@ enum class standard_filenos
   standard_error = STDERR_FILENO,
   max_standard_fd
 };
+
+/**
+ * @brief POSIX shell argument expander
+ *
+ * This class wraps the wordexp syscall in a RAII wrapper. wordexp is a POSIX
+ * system call that emulates shell parsing for a string as shell would.
+ *
+ * The return type of wordexp includes includes a delimeted string containing
+ * args for the function that needs to be called.
+ *
+ * @see https://linux.die.net/man/3/wordexp
+ *
+ */
 class shell_expander
 {
 public:
-  shell_expander(const std::string& s);
-  ~shell_expander();
+  shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args, 0); }
+  ~shell_expander() { ::wordfree(&parsed_args); }
 
   decltype(std::declval<wordexp_t>().we_wordv) argv() & { return parsed_args.we_wordv; }
 
@@ -124,20 +137,16 @@ private:
   ::wordexp_t parsed_args;
 };
 
-shell_expander::shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args, 0); }
-shell_expander::~shell_expander() { ::wordfree(&parsed_args); }
-
 } // namespace posix_util
 
 /**
  * @brief Abstracts file descriptors
  *
- * Member functions of this class wrap syscalls to commonly
- * used file descriptor functions.
+ * Member functions of this class and its descendents
+ * wrap syscalls to commonly used file descriptor functions.
  *
- * The implementation of this class will be changed in the future with #4.
- *
- * @see https://github.com/rajatjain1997/subprocess/issues/4
+ * As a user, you can derive from this class to implement your own
+ * custom descriptors.
  *
  */
 class descriptor
@@ -146,29 +155,73 @@ public:
   descriptor(int fd = -1) : fd_{fd} {}
   virtual ~descriptor() {}
 
+  /**
+   * @brief Returns the encapsulated file descriptor
+   *
+   * The return value of fd() is used by subprocess::process
+   * and sent to child processes. This is the fd() that the
+   * process will read/write from.
+   *
+   * @return int OS-level file descriptor for subprocess I/O
+   */
   int fd() const { return fd_; }
 
-  bool linked() const { return linked_fd_ != nullptr; }
-
-  operator int() const { return fd(); }
-
-  virtual void open() {}
-  virtual void close() {}
+  /**
+   * @brief Marks whether the subprocess should close the FD
+   *
+   * @return true The subprocess should close the FD
+   * @return false The subprocess shouldn't close the FD
+   */
   virtual bool closable() { return false; }
 
-  descriptor* linked_fd_{nullptr};
+  /**
+   * @brief Initialize call before the process runs
+   *
+   * open() is called by subprocess::execute() right before
+   * spawning the child process. This is the function to write
+   * for the set up of your I/O from the process.
+   */
+  virtual void open() {}
+
+  /**
+   * @brief Tear down the descriptor
+   *
+   * close() is called by subprocess::execute() after the
+   * process is spawned, but before waiting. This should
+   * ideally be the place where you should tear down the constructs
+   * that were required for process I/O.
+   */
+  virtual void close() {}
 
 protected:
   int fd_;
 };
 
+/**
+ * @brief A shorthand for denoting an owning-pointer for descriptor
+ *
+ */
 using descriptor_ptr_t = std::unique_ptr<descriptor>;
 
+/**
+ * @brief Wraps std::make_unique. Used only for self-documentation purposes.
+ *
+ * @tparam T The type of descriptor to create.
+ * @tparam Args
+ * @param args Constructor args that should be passed to the descriptor's constructor
+ * @return std::unique_ptr<T> Returns descriptor_ptr_t
+ */
 template <typename T, typename... Args> std::unique_ptr<T> make_descriptor(Args&&... args)
 {
   return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
+/**
+ * @brief Adds write ability to descriptor
+ *
+ * Additionally, the class is marked closable. All output descriptors
+ * inherit from this class.
+ */
 class odescriptor : public virtual descriptor
 {
 public:
@@ -203,6 +256,12 @@ void odescriptor::close()
   }
 }
 
+/**
+ * @brief Adds read ability to descriptor
+ *
+ * Additionally, the class is marked closable. All input descriptors
+ * inherit from this class.
+ */
 class idescriptor : public virtual descriptor
 {
 public:
@@ -241,6 +300,13 @@ std::string idescriptor::read()
   return output;
 }
 
+/**
+ * @brief Wraps a descriptor mapping to a file on the disc
+ *
+ * The class exports the open() syscall and is the parent class of
+ * ofile_descriptor and ifile_descriptor.
+ *
+ */
 class file_descriptor : public virtual descriptor
 {
 public:
@@ -265,6 +331,10 @@ void file_descriptor::open()
   }
 }
 
+/**
+ * @brief Always opens the file in write-mode
+ *
+ */
 class ofile_descriptor : public virtual odescriptor, public virtual file_descriptor
 {
 public:
@@ -273,6 +343,10 @@ public:
   ofile_descriptor(std::filesystem::path path, int mode) : file_descriptor{std::move(path), mode} {}
 };
 
+/**
+ * @brief Always opens the file in read-mode
+ *
+ */
 class ifile_descriptor : public virtual idescriptor, public virtual file_descriptor
 {
 public:
@@ -295,18 +369,6 @@ protected:
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
 };
 
-void opipe_descriptor::open()
-{
-  if (fd() > 0)
-  {
-    return;
-  }
-  int fd[2];
-  if (::pipe(fd) < 0) throw exceptions::os_error{"Could not create a pipe!"};
-  linked_fd_->fd_ = fd[0];
-  fd_             = fd[1];
-}
-
 class ipipe_descriptor : public virtual idescriptor
 {
 public:
@@ -318,6 +380,18 @@ protected:
   friend class opipe_descriptor;
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
 };
+
+void opipe_descriptor::open()
+{
+  if (fd() > 0)
+  {
+    return;
+  }
+  int fd[2];
+  if (::pipe(fd) < 0) throw exceptions::os_error{"Could not create a pipe!"};
+  linked_fd_->fd_ = fd[0];
+  fd_             = fd[1];
+}
 
 void ipipe_descriptor::open()
 {
@@ -421,16 +495,6 @@ auto err()
  */
 void link(ipipe_descriptor& fd1, opipe_descriptor& fd2)
 {
-  auto link_fds = [](descriptor& linking_fd, descriptor& linked_fd)
-  {
-    if (linking_fd.linked_fd_)
-    {
-    }
-    else
-    {
-      linking_fd.linked_fd_ = &linked_fd;
-    }
-  };
   if (fd1.linked_fd_ or fd2.linked_fd_)
   {
     throw exceptions::usage_error{
@@ -568,22 +632,22 @@ private:
 
   friend command& operator<(command& cmd, descriptor_ptr_t fd);
   friend command&& operator<(command&& cmd, descriptor_ptr_t fd);
-  // friend command& operator<(command& cmd, std::string& input);
-  // friend command&& operator<(command&& cmd, std::string& input);
+  friend command& operator<(command& cmd, std::string& input);
+  friend command&& operator<(command&& cmd, std::string& input);
   friend command& operator<(command& cmd, std::filesystem::path file_name);
   friend command&& operator<(command&& cmd, std::filesystem::path file_name);
 
   friend command& operator>(command& cmd, descriptor_ptr_t fd);
   friend command&& operator>(command&& cmd, descriptor_ptr_t fd);
-  // friend command& operator>(command& cmd, std::string& output);
-  // friend command&& operator>(command&& cmd, std::string& output);
+  friend command& operator>(command& cmd, std::string& output);
+  friend command&& operator>(command&& cmd, std::string& output);
   friend command& operator>(command& cmd, const std::filesystem::path& file_name);
   friend command&& operator>(command&& cmd, const std::filesystem::path& file_name);
 
   friend command& operator>=(command& cmd, descriptor_ptr_t fd);
   friend command&& operator>=(command&& cmd, descriptor_ptr_t fd);
-  // friend command& operator>=(command& cmd, std::string& output);
-  // friend command&& operator>=(command&& cmd, std::string& output);
+  friend command& operator>=(command& cmd, std::string& output);
+  friend command&& operator>=(command&& cmd, std::string& output);
   friend command& operator>=(command& cmd, const std::filesystem::path& file_name);
   friend command&& operator>=(command&& cmd, const std::filesystem::path& file_name);
 

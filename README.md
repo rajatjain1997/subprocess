@@ -18,12 +18,12 @@ It works exactly how you would expect it to work.
 ```cpp
 #include <subprocess.hpp>
 
-using subprocess::command;
+using subprocess::literals;
 
-int main(int argc, char* argv[])
+int main()
 {
     std::string owners;
-    (command{"ls", "-l", argv[1]} | command{"awk", "NR>1{print $3}"} | command{"sort"} | command{"uniq"} > owners).run();
+    ("ls -l"_cmd | "awk 'NR>1{print $3}'"_cmd | "sort"_cmd | "uniq"_cmd > owners).run();
     // Use the owners as you wish
 }
 ```
@@ -40,10 +40,10 @@ You can write shell commands using the `subprocess::command` class and use the r
 
 ```cpp
 // Running a command
-subprocess::command cmd{"touch", file_path}.run();
+subprocess::command cmd{"touch" + file_path}.run();
 
 // Piping the output of a command to another command
-cmd | subprocess::command{"uniq"};
+cmd | "uniq"_cmd;
 ```
 
 ### Redirecting stdin
