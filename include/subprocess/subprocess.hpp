@@ -551,6 +551,7 @@ void posix_process::execute()
   {
     throw exceptions::os_error{"Failed to spawn process"};
   }
+  posix_spawn_file_actions_destroy(&action);
   pid_ = pid;
   stdin_fd->close();
   stdout_fd->close();
