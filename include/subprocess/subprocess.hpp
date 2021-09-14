@@ -539,7 +539,7 @@ void posix_process::execute()
     if (fd->closable()) posix_spawn_file_actions_addclose(action, fd->fd());
   };
 
-  posix_util::shell_expander sh{cmd_};
+  // posix_util::shell_expander sh{cmd_};
   posix_spawn_file_actions_t action;
 
   posix_spawn_file_actions_init(&action);
@@ -547,7 +547,8 @@ void posix_process::execute()
   dup_and_close(&action, stdout_fd, {STDOUT_FILENO});
   dup_and_close(&action, stderr_fd, {STDERR_FILENO});
   int pid;
-  if (::posix_spawnp(&pid, sh.argv()[0], &action, NULL, sh.argv(), NULL))
+  char* args[] = {"ls", "-ltr", NULL};
+  if (::posix_spawnp(&pid, "ls", &action, NULL, args, NULL))
   {
     throw exceptions::os_error{"Failed to spawn process"};
   }
@@ -616,8 +617,7 @@ public:
    * the other command object.
    *
    * Currently, the argument can only be an r-value because of
-   * open file descriptors. This might be changed with implementation
-   * of #4.
+   * open file descriptors. This will be changed soon.
    *
    * @see https://github.com/rajatjain1997/subprocess/issues/4
    *
