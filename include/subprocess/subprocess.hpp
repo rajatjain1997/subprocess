@@ -119,7 +119,7 @@ enum class standard_filenos
  * This class wraps the wordexp syscall in a RAII wrapper. wordexp is a POSIX
  * system call that emulates shell parsing for a string as shell would.
  *
- * The return type of wordexp includes includes a delimeted string containing
+ * The return type of wordexp includes includes a delimited string containing
  * args for the function that needs to be called.
  *
  * @see https://linux.die.net/man/3/wordexp
