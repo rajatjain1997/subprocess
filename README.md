@@ -4,6 +4,7 @@
 ![build](https://github.com/rajatjain1997/subprocess/actions/workflows/cmake.yml/badge.svg?branch=master)
 [![issues](https://img.shields.io/github/issues/rajatjain1997/subprocess)](https://github.com/rajatjain1997/subprocess/issues)
 ![GitHub](https://img.shields.io/github/license/rajatjain1997/subprocess)
+[![online](https://img.shields.io/badge/try%20it-online-brightgreen)](https://wandbox.org/permlink/T0iHbd6sSIXzM9vO)
 ![stars](https://img.shields.io/github/stars/rajatjain1997/subprocess?style=social)
 
 There are many C++ subprocessing libraries out there, but none of them *just* work. The aim of this library is to allow you to write shell commands in C++ *almost* as if you were writing them in shell.
