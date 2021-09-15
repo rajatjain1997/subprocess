@@ -18,7 +18,7 @@ It works exactly how you would expect it to work.
 ```cpp
 #include <subprocess.hpp>
 
-using subprocess::literals;
+using namespace subprocess::literals;
 
 int main()
 {
