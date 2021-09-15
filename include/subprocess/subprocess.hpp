@@ -340,7 +340,10 @@ class ofile_descriptor : public virtual odescriptor, public virtual file_descrip
 public:
   using file_descriptor::closable;
   using file_descriptor::close;
-  ofile_descriptor(std::filesystem::path path, int mode) : file_descriptor{std::move(path), mode} {}
+  ofile_descriptor(std::filesystem::path path, int mode = 0)
+      : file_descriptor{std::move(path), O_WRONLY | mode}
+  {
+  }
 };
 
 /**
@@ -352,7 +355,10 @@ class ifile_descriptor : public virtual idescriptor, public virtual file_descrip
 public:
   using file_descriptor::closable;
   using file_descriptor::close;
-  ifile_descriptor(std::filesystem::path path, int mode) : file_descriptor{std::move(path), mode} {}
+  ifile_descriptor(std::filesystem::path path, int mode = 0)
+      : file_descriptor{std::move(path), O_RDONLY | mode}
+  {
+  }
 };
 
 class ipipe_descriptor;
@@ -632,35 +638,10 @@ private:
   std::deque<process> processes;
 
   friend command& operator<(command& cmd, descriptor_ptr_t fd);
-  friend command&& operator<(command&& cmd, descriptor_ptr_t fd);
-  friend command& operator<(command& cmd, std::string& input);
-  friend command&& operator<(command&& cmd, std::string& input);
-  friend command& operator<(command& cmd, std::filesystem::path file_name);
-  friend command&& operator<(command&& cmd, std::filesystem::path file_name);
 
   friend command& operator>(command& cmd, descriptor_ptr_t fd);
-  friend command&& operator>(command&& cmd, descriptor_ptr_t fd);
-  friend command& operator>(command& cmd, std::string& output);
-  friend command&& operator>(command&& cmd, std::string& output);
-  friend command& operator>(command& cmd, const std::filesystem::path& file_name);
-  friend command&& operator>(command&& cmd, const std::filesystem::path& file_name);
 
   friend command& operator>=(command& cmd, descriptor_ptr_t fd);
-  friend command&& operator>=(command&& cmd, descriptor_ptr_t fd);
-  friend command& operator>=(command& cmd, std::string& output);
-  friend command&& operator>=(command&& cmd, std::string& output);
-  friend command& operator>=(command& cmd, const std::filesystem::path& file_name);
-  friend command&& operator>=(command&& cmd, const std::filesystem::path& file_name);
-
-  friend command& operator>>(command& cmd, descriptor_ptr_t fd);
-  friend command&& operator>>(command&& cmd, descriptor_ptr_t fd);
-  friend command& operator>>(command& cmd, const std::filesystem::path& file_name);
-  friend command&& operator>>(command&& cmd, const std::filesystem::path& file_name);
-
-  friend command& operator>>=(command& cmd, descriptor_ptr_t fd);
-  friend command&& operator>>=(command&& cmd, descriptor_ptr_t fd);
-  friend command& operator>>=(command& cmd, const std::filesystem::path& file_name);
-  friend command&& operator>>=(command&& cmd, const std::filesystem::path& file_name);
 };
 
 int command::run(std::nothrow_t)
@@ -700,6 +681,12 @@ command& command::operator|(command&& other)
 
 command& command::operator|(std::string other) { return *this | command{std::move(other)}; }
 
+command& operator<(command& cmd, descriptor_ptr_t fd)
+{
+  cmd.processes.front().in(std::move(fd));
+  return cmd;
+}
+
 command& operator>(command& cmd, descriptor_ptr_t fd)
 {
   cmd.processes.back().out(std::move(fd));
@@ -715,12 +702,6 @@ command& operator>=(command& cmd, descriptor_ptr_t fd)
 command& operator>>(command& cmd, descriptor_ptr_t fd) { return (cmd > std::move(fd)); }
 
 command& operator>>=(command& cmd, descriptor_ptr_t fd) { return (cmd >= std::move(fd)); }
-
-command& operator<(command& cmd, descriptor_ptr_t fd)
-{
-  cmd.processes.front().in(std::move(fd));
-  return cmd;
-}
 
 command& operator>=(command& cmd, std::string& output)
 {
@@ -739,27 +720,27 @@ command& operator<(command& cmd, std::string& input)
 
 command& operator>(command& cmd, const std::filesystem::path& file_name)
 {
-  return cmd > make_descriptor<ofile_descriptor>(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+  return cmd > make_descriptor<ofile_descriptor>(file_name, O_CREAT | O_TRUNC);
 }
 
 command& operator>=(command& cmd, const std::filesystem::path& file_name)
 {
-  return cmd >= make_descriptor<ofile_descriptor>(file_name, O_WRONLY | O_CREAT | O_TRUNC);
+  return cmd >= make_descriptor<ofile_descriptor>(file_name, O_CREAT | O_TRUNC);
 }
 
 command& operator>>(command& cmd, const std::filesystem::path& file_name)
 {
-  return cmd >> make_descriptor<ofile_descriptor>(file_name, O_WRONLY | O_CREAT | O_APPEND);
+  return cmd >> make_descriptor<ofile_descriptor>(file_name, O_CREAT | O_APPEND);
 }
 
 command& operator>>=(command& cmd, const std::filesystem::path& file_name)
 {
-  return cmd >>= make_descriptor<ofile_descriptor>(file_name, O_WRONLY | O_CREAT | O_APPEND);
+  return cmd >>= make_descriptor<ofile_descriptor>(file_name, O_CREAT | O_APPEND);
 }
 
 command& operator<(command& cmd, std::filesystem::path file_name)
 {
-  return cmd < make_descriptor<ofile_descriptor>(file_name, O_RDONLY);
+  return cmd < make_descriptor<ofile_descriptor>(file_name);
 }
 
 command&& operator>(command&& cmd, descriptor_ptr_t fd) { return std::move(cmd > std::move(fd)); }
