@@ -29,6 +29,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <filesystem>
 #include <functional>
 #include <list>
@@ -37,6 +38,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <unordered_set>
@@ -64,26 +66,14 @@ namespace exceptions
  * An exception of type subprocess_error is never actually thrown.
  *
  */
-class subprocess_error : public std::runtime_error
+class subprocess_error : public std::system_error
 {
 public:
-  explicit subprocess_error(const std::string& str) : runtime_error(str) {}
-  explicit subprocess_error(const char* str) : runtime_error(str) {}
-};
-
-/**
- * @brief Thrown when there is an error at the operating system level
- *
- * Thrown whenever an error code is returned from a syscall and
- * subprocess is unable to proceed with the function called by
- * the user.
- *
- */
-class os_error : public subprocess_error
-{
-public:
-  explicit os_error(const std::string& str) : subprocess_error(str) {}
-  explicit os_error(const char* str) : subprocess_error(str) {}
+  using system_error::system_error;
+  subprocess_error(std::string_view what_arg, int errc = errno)
+      : system_error{errc, std::generic_category(), what_arg.data()}
+  {
+  }
 };
 
 /**
@@ -100,8 +90,21 @@ public:
 class usage_error : public subprocess_error
 {
 public:
-  explicit usage_error(const std::string& str) : subprocess_error(str) {}
-  explicit usage_error(const char* str) : subprocess_error(str) {}
+  explicit usage_error(std::string_view what_arg) : subprocess_error{what_arg, -1} {}
+};
+
+/**
+ * @brief Thrown when there is an error at the operating system level
+ *
+ * Thrown whenever an error code is returned from a syscall and
+ * subprocess is unable to proceed with the function called by
+ * the user.
+ *
+ */
+class os_error : public subprocess_error
+{
+public:
+  using subprocess_error::subprocess_error;
 };
 
 /**
@@ -113,20 +116,8 @@ public:
 
 class command_error : public subprocess_error
 {
-  int return_code_;
-
 public:
-  explicit command_error(const std::string& str, int ret_code) : subprocess_error(str), return_code_{ret_code}
-  {
-  }
-  explicit command_error(const char* str, int ret_code) : subprocess_error(str), return_code_{ret_code} {}
-
-  /**
-   * @brief Returns the exit code of the subprocess
-   *
-   * @return int exit code
-   */
-  [[nodiscard]] int return_code() const { return return_code_; }
+  using subprocess_error::subprocess_error;
 };
 } // namespace exceptions
 
@@ -311,9 +302,19 @@ public:
 
 inline void odescriptor::write(std::string& input)
 {
-  if (::write(fd(), input.c_str(), input.size()) < static_cast<ssize_t>(input.size()))
+  ssize_t total         = static_cast<ssize_t>(input.size());
+  std::ptrdiff_t offset = 0;
+  while (total > 0)
   {
-    throw exceptions::os_error{"Could not write the input to descriptor"};
+    if (ssize_t len; (len = ::write(fd(), input.c_str() + offset, total)) >= 0)
+    {
+      offset += len;
+      total -= len;
+    }
+    else
+    {
+      throw exceptions::os_error{"write"};
+    }
   }
 }
 
@@ -361,9 +362,14 @@ inline std::string idescriptor::read()
   static std::array<char, buf_size> buf;
   static std::string output;
   output.clear();
-  while (::read(fd(), buf.data(), buf_size) > 0)
+  ssize_t len;
+  while ((len = ::read(fd(), buf.data(), 2048)) > 0)
   {
-    output.append(buf.data());
+    output.append(buf.data(), len);
+  }
+  if (len < 0)
+  {
+    exceptions::os_error{"read"};
   }
   return output;
 }
@@ -403,7 +409,7 @@ inline void file_descriptor::open()
   }
   else
   {
-    throw exceptions::os_error{"Failed to open file " + path_};
+    throw exceptions::os_error{"open: " + path_};
   }
 }
 
@@ -472,7 +478,7 @@ inline void opipe_descriptor::open()
   std::array<int, 2> fd{};
   if (::pipe(fd.data()) < 0)
   {
-    throw exceptions::os_error{"Could not create a pipe!"};
+    throw exceptions::os_error{"pipe"};
   }
   linked_fd_->fd_ = fd[0];
   fd_             = fd[1];
@@ -487,7 +493,7 @@ inline void ipipe_descriptor::open()
   std::array<int, 2> fd{};
   if (::pipe(fd.data()) < 0)
   {
-    throw exceptions::os_error{"Could not create a pipe!"};
+    throw exceptions::os_error{"pipe"};
   }
   fd_             = fd[0];
   linked_fd_->fd_ = fd[1];
@@ -696,9 +702,9 @@ inline void posix_process::execute()
   action.close(stderr_fd_);
 
   int pid{};
-  if (::posix_spawnp(&pid, sh.argv()[0], action.get(), nullptr, sh.argv(), nullptr) != 0)
+  if (int err{::posix_spawnp(&pid, sh.argv()[0], action.get(), nullptr, sh.argv(), nullptr)}; err != 0)
   {
-    throw exceptions::os_error{"Failed to spawn process"};
+    throw exceptions::os_error{"posix_spawnp: " + std::string{sh.argv()[0]}, err};
   }
   pid_ = pid;
   stdin_fd_->close();
@@ -738,7 +744,7 @@ public:
    * run only returns when the return code from the pipeline is 0.
    * Otherwise, it throws subprocess::exceptions::command_error.
    *
-   * It can also throw subprocess::os_error if the command could not be
+   * It can also throw exceptions::os_error if the command could not be
    * run due to some operating system level restrictions/errors.
    *
    * @return int Return code from the pipeline
@@ -751,7 +757,7 @@ public:
    * run(nothrow_t) returns the exit code from the pipeline.
    * It doesn't throw subprocess::exceptions::command_error.
    *
-   * However, it can still throw subprocess::os_error in case of
+   * However, it can still throw exceptions::os_error in case of
    * operating system level restrictions/errors.
    *
    * @return int Return code from the pipeline
