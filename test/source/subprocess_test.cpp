@@ -1,11 +1,8 @@
 #include <string>
 
-#include <subprocess/subprocess.hpp>
 #include <gtest/gtest.h>
+#include <subprocess/subprocess.hpp>
 
 using subprocess::command;
 
-TEST(subprocess, test_simple_cmd)
-{
-  command{"ls"}.run();
-}
+TEST(subprocess, test_simple_cmd) { command{"ls"}.run(); }
