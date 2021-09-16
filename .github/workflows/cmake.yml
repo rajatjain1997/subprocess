@@ -76,6 +76,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install conan
+      run: pip3 install conan
+
     - name: Configure
       env: { CXX: clang++-11 }
       run: cmake --preset=ci-sanitize
@@ -101,24 +104,21 @@ jobs:
       matrix:
         os: [macos, ubuntu]
 
-        type: [shared, static]
-
-        include:
-        - { type: shared, shared: YES }
-        - { type: static, shared: NO }
-
     runs-on: ${{ matrix.os }}-latest
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install conan
+      run: pip3 install conan
 
     - name: Install static analyzers
       if: matrix.os == 'ubuntu'
       run: sudo apt-get install clang-tidy cppcheck -y -q
 
     - name: Configure
+      env: { CXX: /usr/bin/clang++ }
       run: cmake --preset=ci-${{ matrix.os }}
-        -D BUILD_SHARED_LIBS=${{ matrix.shared }}
 
     - name: Build
       run: cmake --build build --config Release -j 2
