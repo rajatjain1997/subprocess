@@ -1,11 +1,11 @@
 #include <string>
 
 #include <subprocess/subprocess.hpp>
+#include <gtest/gtest.h>
 
 using subprocess::command;
 
-int main()
+TEST(subprocess, test_simple_cmd)
 {
   command{"ls"}.run();
-  return 0;
 }

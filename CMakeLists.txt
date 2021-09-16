@@ -10,7 +10,17 @@ project(
     LANGUAGES CXX
 )
 
+execute_process(
+    COMMAND conan install ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 docs_early_return()
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+
+conan_basic_setup(TARGETS)
+
 
 include(cmake/project-is-top-level.cmake)
 include(cmake/variables.cmake)
