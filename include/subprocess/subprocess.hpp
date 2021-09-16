@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cerrno>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -10,6 +11,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -41,21 +43,6 @@ class subprocess_error : public std::runtime_error
 public:
   explicit subprocess_error(const std::string& str) : runtime_error(str) {}
   explicit subprocess_error(const char* str) : runtime_error(str) {}
-};
-
-/**
- * @brief Thrown when there is an error at the operating system level
- *
- * Thrown whenever an error code is returned from a syscall and
- * subprocess is unable to proceed with the function called by
- * the user.
- *
- */
-class os_error : public subprocess_error
-{
-public:
-  explicit os_error(const std::string& str) : subprocess_error(str) {}
-  explicit os_error(const char* str) : subprocess_error(str) {}
 };
 
 /**
@@ -101,6 +88,39 @@ public:
   int return_code() { return return_code_; }
 };
 } // namespace exceptions
+
+/**
+ * @brief Raise a std::system_error when a syscall fails
+ *
+ * @param name The name of the offending function.
+ * @param errval The errno-style error code.
+ * @param extra Additional text to display in the error message.
+ */
+[[noreturn]] void raise_sys_error(std::string name, int errval, const std::string& extra = "")
+{
+  if (extra.length())
+  {
+    name += ": ";
+    name += extra;
+  }
+  throw std::system_error(errval, std::generic_category(), name);
+}
+
+/**
+ * @brief Raise a std::system_error when a syscall fails
+ *
+ * @param name The name of the offending function.
+ * @param extra Additional text to display in the error.
+ */
+[[noreturn]] void raise_sys_error(std::string name, const std::string& extra = "")
+{
+  if (extra.length())
+  {
+    name += ": ";
+    name += extra;
+  }
+  throw std::system_error(errno, std::generic_category(), name);
+}
 
 namespace posix_util
 {
@@ -231,7 +251,7 @@ public:
    *
    * @param input
    */
-  virtual void write(std::string& input);
+  virtual void write(const std::string& input);
   virtual void close() override;
   virtual bool closable() override { return true; }
 
@@ -239,11 +259,21 @@ private:
   bool closed_{false};
 };
 
-void odescriptor::write(std::string& input)
+void odescriptor::write(const std::string& input)
 {
-  if (::write(fd(), input.c_str(), input.size()) < static_cast<ssize_t>(input.size()))
+  ssize_t total         = static_cast<ssize_t>(input.size());
+  std::ptrdiff_t offset = 0;
+  while (total > 0)
   {
-    throw exceptions::os_error{"Could not write the input to descriptor"};
+    if (ssize_t len; (len = ::write(fd(), input.c_str() + offset, total)) >= 0)
+    {
+      offset += len;
+      total -= len;
+    }
+    else
+    {
+      raise_sys_error("write");
+    }
   }
 }
 
@@ -293,9 +323,14 @@ std::string idescriptor::read()
   static char buf[2048];
   static std::string output;
   output.clear();
-  while (::read(fd(), buf, 2048) > 0)
+  ssize_t len;
+  while ((len = ::read(fd(), buf, 2048)) > 0)
   {
-    output.append(buf);
+    output.append(buf, len);
+  }
+  if (len < 0)
+  {
+    raise_sys_error("read");
   }
   return output;
 }
@@ -323,7 +358,7 @@ void file_descriptor::open()
 {
   if (int fd{::open(path_.c_str(), mode_)}; fd < 0)
   {
-    throw exceptions::os_error{"Failed to open file " + path_.string()};
+    raise_sys_error("open", path_.string());
   }
   else
   {
@@ -394,7 +429,7 @@ void opipe_descriptor::open()
     return;
   }
   int fd[2];
-  if (::pipe(fd) < 0) throw exceptions::os_error{"Could not create a pipe!"};
+  if (::pipe(fd) < 0) raise_sys_error("pipe");
   linked_fd_->fd_ = fd[0];
   fd_             = fd[1];
 }
@@ -406,7 +441,7 @@ void ipipe_descriptor::open()
     return;
   }
   int fd[2];
-  if (::pipe(fd) < 0) throw exceptions::os_error{"Could not create a pipe!"};
+  if (::pipe(fd) < 0) raise_sys_error("pipe");
   fd_             = fd[0];
   linked_fd_->fd_ = fd[1];
 }
@@ -553,9 +588,10 @@ void posix_process::execute()
   dup_and_close(&action, stdout_fd, {STDOUT_FILENO});
   dup_and_close(&action, stderr_fd, {STDERR_FILENO});
   int pid;
-  if (::posix_spawnp(&pid, sh.argv()[0], &action, NULL, sh.argv(), NULL))
+  int err;
+  if ((err = ::posix_spawnp(&pid, sh.argv()[0], &action, NULL, sh.argv(), NULL)) != 0)
   {
-    throw exceptions::os_error{"Failed to spawn process"};
+    raise_sys_error("posix_spawnp", err, sh.argv()[0]);
   }
   posix_spawn_file_actions_destroy(&action);
   pid_ = pid;
@@ -596,7 +632,7 @@ public:
    * run only returns when the return code from the pipeline is 0.
    * Otherwise, it throws subprocess::exceptions::command_error.
    *
-   * It can also throw subprocess::os_error if the command could not be
+   * It can also throw std::system_error if the command could not be
    * run due to some operating system level restrictions/errors.
    *
    * @return int Return code from the pipeline
@@ -609,7 +645,7 @@ public:
    * run(nothrow_t) returns the exit code from the pipeline.
    * It doesn't throw subprocess::exceptions::command_error.
    *
-   * However, it can still throw subprocess::os_error in case of
+   * However, it can still throw std::system_error in case of
    * operating system level restrictions/errors.
    *
    * @return int Return code from the pipeline
