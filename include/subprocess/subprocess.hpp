@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -128,10 +129,10 @@ class shell_expander
 {
 public:
   explicit shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args_, 0); }
-  shell_expander(const shell_expander&) = default;
-  shell_expander(shell_expander&&)      = default;
+  shell_expander(const shell_expander&)     = default;
+  shell_expander(shell_expander&&) noexcept = default;
   shell_expander& operator=(const shell_expander&) = default;
-  shell_expander& operator=(shell_expander&&) = default;
+  shell_expander& operator=(shell_expander&&) noexcept = default;
   ~shell_expander() { ::wordfree(&parsed_args_); }
 
   [[nodiscard]] decltype(std::declval<wordexp_t>().we_wordv) argv() const& { return parsed_args_.we_wordv; }
@@ -157,7 +158,11 @@ class descriptor
 public:
   descriptor() = default;
   explicit descriptor(int fd) : fd_{fd} {}
-  virtual ~descriptor() = default;
+  descriptor(const descriptor&)     = default;
+  descriptor(descriptor&&) noexcept = default;
+  descriptor& operator=(const descriptor&) = default;
+  descriptor& operator=(descriptor&&) noexcept = default;
+  virtual ~descriptor()                        = default;
 
   /**
    * @brief Returns the encapsulated file descriptor
@@ -294,12 +299,13 @@ inline void idescriptor::close()
 
 inline std::string idescriptor::read()
 {
-  static char buf[2048];
+  static constexpr int buf_size{2048};
+  static std::array<char, buf_size> buf;
   static std::string output;
   output.clear();
-  while (::read(fd(), buf, 2048) > 0)
+  while (::read(fd(), buf.data(), buf_size) > 0)
   {
-    output.append(buf);
+    output.append(buf.data());
   }
   return output;
 }
@@ -315,6 +321,10 @@ class file_descriptor : public virtual descriptor
 {
 public:
   file_descriptor(std::filesystem::path path, int mode) : path_{std::move(path)}, mode_{mode} {}
+  file_descriptor(const file_descriptor&)     = default;
+  file_descriptor(file_descriptor&&) noexcept = default;
+  file_descriptor& operator=(const file_descriptor&) = default;
+  file_descriptor& operator=(file_descriptor&&) noexcept = default;
   ~file_descriptor() override { close(); }
   void open() override;
 
@@ -397,8 +407,8 @@ inline void opipe_descriptor::open()
   {
     return;
   }
-  int fd[2];
-  if (::pipe(fd) < 0)
+  std::array<int, 2> fd{};
+  if (::pipe(fd.data()) < 0)
   {
     throw exceptions::os_error{"Could not create a pipe!"};
   }
@@ -412,8 +422,8 @@ inline void ipipe_descriptor::open()
   {
     return;
   }
-  int fd[2];
-  if (::pipe(fd) < 0)
+  std::array<int, 2> fd{};
+  if (::pipe(fd.data()) < 0)
   {
     throw exceptions::os_error{"Could not create a pipe!"};
   }
@@ -571,7 +581,7 @@ inline void posix_process::execute()
   dup_and_close(&action, stderr_fd_,
                 descriptor{static_cast<int>(posix_util::standard_filenos::standard_error)});
   int pid{};
-  if (::posix_spawnp(&pid, sh.argv()[0], &action, nullptr, sh.argv(), nullptr))
+  if (::posix_spawnp(&pid, sh.argv()[0], &action, nullptr, sh.argv(), nullptr) != 0)
   {
     throw exceptions::os_error{"Failed to spawn process"};
   }
@@ -588,9 +598,9 @@ inline int posix_process::wait()
   {
     throw exceptions::usage_error{"posix_process.wait() called before posix_process.execute()"};
   }
-  int waitstatus;
+  int waitstatus{};
   ::waitpid(*(pid_), &waitstatus, 0);
-  return waitstatus;
+  return WEXITSTATUS(waitstatus);
 }
 
 using process_t = posix_process;
@@ -665,24 +675,22 @@ inline int command::run(std::nothrow_t /*unused*/)
   {
     process.execute();
   }
-  int waitstatus;
+  int waitstatus{};
   for (auto& process : processes_)
   {
     waitstatus = process.wait();
   }
-  return WEXITSTATUS(waitstatus);
+  return waitstatus;
 }
 
 inline int command::run()
 {
-  if (int status{run(std::nothrow)}; status != 0)
+  int status{run(std::nothrow)};
+  if (status != 0)
   {
     throw exceptions::command_error{"Command exited with code " + std::to_string(status) + ".", status};
   }
-  else
-  {
-    return status;
-  }
+  return status;
 }
 
 inline command& command::operator|(command&& other)
