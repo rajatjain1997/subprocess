@@ -65,7 +65,7 @@
       "hidden": true,
       "cacheVariables": {
         "ENABLE_COVERAGE": "ON",
-        "CMAKE_BUILD_TYPE": "Coverage",
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -fkeep-inline-functions -fkeep-static-functions",
         "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
         "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage"
@@ -73,7 +73,10 @@
     },
     {
       "name": "ci-coverage",
-      "inherits": ["coverage-unix", "dev-mode"],
+      "inherits": [
+        "coverage-unix",
+        "dev-mode"
+      ],
       "cacheVariables": {
         "COVERAGE_HTML_COMMAND": ""
       }
@@ -81,9 +84,12 @@
     {
       "name": "ci-sanitize",
       "binaryDir": "${sourceDir}/build/sanitize",
-      "inherits": ["ci-unix", "dev-mode"],
+      "inherits": [
+        "ci-unix",
+        "dev-mode"
+      ],
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Sanitize",
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS_SANITIZE": "-O2 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-common"
       }
     },
@@ -94,15 +100,29 @@
     },
     {
       "name": "ci-macos",
-      "inherits": ["ci-build", "ci-unix", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-unix",
+        "dev-mode"
+      ]
     },
     {
       "name": "ci-ubuntu",
-      "inherits": ["ci-build", "ci-unix", "clang-tidy", "cppcheck", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-unix",
+        "clang-tidy",
+        "cppcheck",
+        "dev-mode"
+      ]
     },
     {
       "name": "ci-windows",
-      "inherits": ["ci-build", "ci-win64", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-win64",
+        "dev-mode"
+      ]
     }
   ]
 }

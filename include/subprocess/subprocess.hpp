@@ -570,7 +570,7 @@ int posix_process::wait()
   {
     throw exceptions::usage_error{"posix_process.wait() called before posix_process.execute()"};
   }
-  int waitstatus;
+  int waitstatus{};
   ::waitpid(*(pid_), &waitstatus, 0);
   return waitstatus;
 }

@@ -10,10 +10,12 @@ if(PROJECT_IS_TOP_LEVEL)
   enable_testing()
 endif()
 
+find_package(GTest)
+
 add_executable(subprocess_test source/subprocess_test.cpp)
 target_link_libraries(subprocess_test PRIVATE
     subprocess::subprocess
-    CONAN_PKG::gtest
+    GTest::GTest
     )
 target_compile_features(subprocess_test PRIVATE cxx_std_17)
 
