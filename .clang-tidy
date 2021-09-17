@@ -2,14 +2,19 @@
 # Enable ALL the things! Except not really
 # misc-non-private-member-variables-in-classes: the options don't do anything
 Checks: "*,\
-  -google-readability-todo,\
-  -altera-unroll-loops,\
+  -modernize-use-trailing-return-type,
+  # -google-readability-todo,\
+  # -altera-unroll-loops,\
+  -hicpp-signed-bitwise,\
   -fuchsia-*,\
-  fuchsia-multiple-inheritance,\
   -llvm-header-guard,\
   -llvm-include-order,\
   -llvmlibc-*,\
-  -misc-non-private-member-variables-in-classes"
+  -misc-non-private-member-variables-in-classes,\
+  -cppcoreguidelines-non-private-member-variables-in-classes,\
+  -hicpp-signed-bitwise,\
+  -android-cloexec-pipe,\
+  -google-runtime-references"
 WarningsAsErrors: ''
 CheckOptions:
   - key: 'bugprone-argument-comment.StrictMode'
@@ -110,14 +115,14 @@ CheckOptions:
     value: 'lower_case'
   - key: 'readability-identifier-naming.PrivateMemberCase'
     value: 'lower_case'
-  - key: 'readability-identifier-naming.PrivateMemberPrefix'
-    value: 'm_'
+  - key: 'readability-identifier-naming.PrivateMemberSuffix'
+    value: '_'
   - key: 'readability-identifier-naming.PrivateMethodCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.ProtectedMemberCase'
     value: 'lower_case'
-  - key: 'readability-identifier-naming.ProtectedMemberPrefix'
-    value: 'm_'
+  - key: 'readability-identifier-naming.ProtectedMemberSuffix'
+    value: '_'
   - key: 'readability-identifier-naming.ProtectedMethodCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.PublicMemberCase'

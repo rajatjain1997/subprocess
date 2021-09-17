@@ -127,17 +127,17 @@ enum class standard_filenos
 class shell_expander
 {
 public:
-  explicit shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args, 0); }
+  explicit shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args_, 0); }
   shell_expander(const shell_expander&) = default;
   shell_expander(shell_expander&&)      = default;
   shell_expander& operator=(const shell_expander&) = default;
   shell_expander& operator=(shell_expander&&) = default;
-  ~shell_expander() { ::wordfree(&parsed_args); }
+  ~shell_expander() { ::wordfree(&parsed_args_); }
 
-  [[nodiscard]] decltype(std::declval<wordexp_t>().we_wordv) argv() const& { return parsed_args.we_wordv; }
+  [[nodiscard]] decltype(std::declval<wordexp_t>().we_wordv) argv() const& { return parsed_args_.we_wordv; }
 
 private:
-  ::wordexp_t parsed_args{};
+  ::wordexp_t parsed_args_{};
 };
 
 } // namespace posix_util
@@ -155,7 +155,8 @@ private:
 class descriptor
 {
 public:
-  explicit descriptor(int fd = -1) : fd_{fd} {}
+  descriptor() = default;
+  explicit descriptor(int fd) : fd_{fd} {}
   virtual ~descriptor() = default;
 
   /**
@@ -197,7 +198,7 @@ public:
   virtual void close() {}
 
 protected:
-  int fd_;
+  int fd_{-1};
 };
 
 /**
@@ -314,7 +315,7 @@ class file_descriptor : public virtual descriptor
 {
 public:
   file_descriptor(std::filesystem::path path, int mode) : path_{std::move(path)}, mode_{mode} {}
-  virtual ~file_descriptor() { close(); }
+  ~file_descriptor() override { close(); }
   void open() override;
 
 private:
@@ -366,7 +367,7 @@ public:
 
 class ipipe_descriptor;
 
-class opipe_descriptor : public virtual odescriptor
+class opipe_descriptor : public odescriptor
 {
 public:
   opipe_descriptor() = default;
@@ -378,7 +379,7 @@ protected:
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
 };
 
-class ipipe_descriptor : public virtual idescriptor
+class ipipe_descriptor : public idescriptor
 {
 public:
   ipipe_descriptor() = default;
@@ -420,7 +421,7 @@ inline void ipipe_descriptor::open()
   linked_fd_->fd_ = fd[1];
 }
 
-class ovariable_descriptor : public virtual opipe_descriptor
+class ovariable_descriptor : public opipe_descriptor
 {
 public:
   explicit ovariable_descriptor(std::string& output_var) : output_{output_var} { linked_fd_ = &input_pipe_; }
@@ -439,27 +440,27 @@ inline void ovariable_descriptor::close()
   read();
   input_pipe_.close();
 }
-class ivariable_descriptor : public virtual ipipe_descriptor
+class ivariable_descriptor : public ipipe_descriptor
 {
 public:
   explicit ivariable_descriptor(std::string input_data) : input_{std::move(input_data)}
   {
-    linked_fd_ = &output_pipe;
+    linked_fd_ = &output_pipe_;
   }
 
   void open() override;
-  virtual void write() { output_pipe.write(input_); }
+  virtual void write() { output_pipe_.write(input_); }
 
 private:
   std::string input_;
-  opipe_descriptor output_pipe;
+  opipe_descriptor output_pipe_;
 };
 
 inline void ivariable_descriptor::open()
 {
   ipipe_descriptor::open();
   write();
-  output_pipe.close();
+  output_pipe_.close();
 }
 
 /**
@@ -532,19 +533,19 @@ public:
 
   int wait();
 
-  const descriptor& in() { return *stdin_fd; }
+  const descriptor& in() { return *stdin_fd_; }
 
-  const descriptor& out() { return *stdout_fd; }
+  const descriptor& out() { return *stdout_fd_; }
 
-  const descriptor& err() { return *stderr_fd; }
+  const descriptor& err() { return *stderr_fd_; }
 
-  void in(descriptor_ptr_t&& fd) { stdin_fd = std::move(fd); }
-  void out(descriptor_ptr_t&& fd) { stdout_fd = std::move(fd); }
-  void err(descriptor_ptr_t&& fd) { stderr_fd = std::move(fd); }
+  void in(descriptor_ptr_t&& fd) { stdin_fd_ = std::move(fd); }
+  void out(descriptor_ptr_t&& fd) { stdout_fd_ = std::move(fd); }
+  void err(descriptor_ptr_t&& fd) { stderr_fd_ = std::move(fd); }
 
 private:
   std::string cmd_;
-  descriptor_ptr_t stdin_fd{subprocess::in()}, stdout_fd{subprocess::out()}, stderr_fd{subprocess::err()};
+  descriptor_ptr_t stdin_fd_{subprocess::in()}, stdout_fd_{subprocess::out()}, stderr_fd_{subprocess::err()};
   std::optional<int> pid_;
 };
 
@@ -564,20 +565,21 @@ inline void posix_process::execute()
   posix_spawn_file_actions_t action;
 
   posix_spawn_file_actions_init(&action);
-  dup_and_close(&action, stdin_fd, descriptor{static_cast<int>(posix_util::standard_filenos::standard_in)});
-  dup_and_close(&action, stdout_fd, descriptor{static_cast<int>(posix_util::standard_filenos::standard_out)});
-  dup_and_close(&action, stderr_fd,
+  dup_and_close(&action, stdin_fd_, descriptor{static_cast<int>(posix_util::standard_filenos::standard_in)});
+  dup_and_close(&action, stdout_fd_,
+                descriptor{static_cast<int>(posix_util::standard_filenos::standard_out)});
+  dup_and_close(&action, stderr_fd_,
                 descriptor{static_cast<int>(posix_util::standard_filenos::standard_error)});
-  int pid;
+  int pid{};
   if (::posix_spawnp(&pid, sh.argv()[0], &action, nullptr, sh.argv(), nullptr))
   {
     throw exceptions::os_error{"Failed to spawn process"};
   }
   posix_spawn_file_actions_destroy(&action);
   pid_ = pid;
-  stdin_fd->close();
-  stdout_fd->close();
-  stderr_fd->close();
+  stdin_fd_->close();
+  stdout_fd_->close();
+  stderr_fd_->close();
 }
 
 inline int posix_process::wait()
@@ -604,7 +606,7 @@ using process_t = posix_process;
 class command
 {
 public:
-  explicit command(std::string cmd) { processes.push_back(process_t{std::move(cmd)}); }
+  explicit command(std::string cmd) { processes_.push_back(process_t{std::move(cmd)}); }
 
   /**
    * @brief Runs the command pipeline and throws on error.
@@ -630,7 +632,7 @@ public:
    *
    * @return int Return code from the pipeline
    */
-  int run(std::nothrow_t);
+  int run(std::nothrow_t /*unused*/);
 
   /**
    * @brief Chains a command object to the current one.
@@ -648,7 +650,7 @@ public:
   command& operator|(std::string other);
 
 private:
-  std::deque<process_t> processes;
+  std::deque<process_t> processes_;
 
   friend command& operator<(command& cmd, descriptor_ptr_t fd);
 
@@ -657,14 +659,14 @@ private:
   friend command& operator>=(command& cmd, descriptor_ptr_t fd);
 };
 
-inline int command::run(std::nothrow_t)
+inline int command::run(std::nothrow_t /*unused*/)
 {
-  for (auto& process : processes)
+  for (auto& process : processes_)
   {
     process.execute();
   }
   int waitstatus;
-  for (auto& process : processes)
+  for (auto& process : processes_)
   {
     waitstatus = process.wait();
   }
@@ -686,9 +688,9 @@ inline int command::run()
 inline command& command::operator|(command&& other)
 {
   auto [read_fd, write_fd] = create_pipe();
-  other.processes.front().in(std::move(read_fd));
-  processes.back().out(std::move(write_fd));
-  std::move(other.processes.begin(), other.processes.end(), std::back_inserter(processes));
+  other.processes_.front().in(std::move(read_fd));
+  processes_.back().out(std::move(write_fd));
+  std::move(other.processes_.begin(), other.processes_.end(), std::back_inserter(processes_));
   return *this;
 }
 
@@ -696,19 +698,19 @@ inline command& command::operator|(std::string other) { return *this | command{s
 
 inline command& operator<(command& cmd, descriptor_ptr_t fd)
 {
-  cmd.processes.front().in(std::move(fd));
+  cmd.processes_.front().in(std::move(fd));
   return cmd;
 }
 
 inline command& operator>(command& cmd, descriptor_ptr_t fd)
 {
-  cmd.processes.back().out(std::move(fd));
+  cmd.processes_.back().out(std::move(fd));
   return cmd;
 }
 
 inline command& operator>=(command& cmd, descriptor_ptr_t fd)
 {
-  cmd.processes.back().err(std::move(fd));
+  cmd.processes_.back().err(std::move(fd));
   return cmd;
 }
 
@@ -798,7 +800,7 @@ inline command&& operator<(command&& cmd, std::filesystem::path file_name)
 
 namespace literals
 {
-inline command operator""_cmd(const char* cmd, size_t) { return command{cmd}; }
+inline command operator""_cmd(const char* cmd, size_t /*unused*/) { return command{cmd}; }
 } // namespace literals
 
 } // namespace subprocess
