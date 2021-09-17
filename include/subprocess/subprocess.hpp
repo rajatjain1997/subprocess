@@ -616,7 +616,7 @@ using process_t = posix_process;
 class command
 {
 public:
-  explicit command(std::string cmd) { processes_.push_back(process_t{std::move(cmd)}); }
+  explicit command(std::string cmd) { processes_.emplace_back(std::move(cmd)); }
 
   /**
    * @brief Runs the command pipeline and throws on error.
