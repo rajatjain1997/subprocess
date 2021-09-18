@@ -4,7 +4,6 @@
 #include <array>
 #include <filesystem>
 #include <functional>
-#include <iostream>
 #include <list>
 #include <memory>
 #include <new>
@@ -13,6 +12,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 extern "C"
@@ -265,10 +265,7 @@ public:
    */
   virtual void write(std::string& input);
   void close() override;
-  [[nodiscard]] bool closable() const override { return true; }
-
-private:
-  bool closed_{false};
+  [[nodiscard]] bool closable() const override { return fd() >= 0; }
 };
 
 inline void odescriptor::write(std::string& input)
@@ -281,10 +278,10 @@ inline void odescriptor::write(std::string& input)
 
 inline void odescriptor::close()
 {
-  if (not closed_)
+  if (closable())
   {
     ::close(fd());
-    closed_ = true;
+    fd_ = -1;
   }
 }
 
@@ -305,18 +302,15 @@ public:
    */
   virtual std::string read();
   void close() override;
-  [[nodiscard]] bool closable() const override { return true; }
-
-private:
-  bool closed_{false};
+  [[nodiscard]] bool closable() const override { return fd() >= 0; }
 };
 
 inline void idescriptor::close()
 {
-  if (not closed_)
+  if (closable())
   {
     ::close(fd());
-    closed_ = true;
+    fd_ = -1;
   }
 }
 
@@ -358,6 +352,10 @@ private:
 
 inline void file_descriptor::open()
 {
+  if (fd_ > 0)
+  {
+    return;
+  }
   if (int fd{::open(path_.c_str(), mode_)}; fd >= 0)
   {
     fd_ = fd;
@@ -426,7 +424,7 @@ protected:
 
 inline void opipe_descriptor::open()
 {
-  if (fd() > 0)
+  if (closable())
   {
     return;
   }
@@ -441,7 +439,7 @@ inline void opipe_descriptor::open()
 
 inline void ipipe_descriptor::open()
 {
-  if (fd() > 0)
+  if (closable())
   {
     return;
   }
@@ -469,9 +467,14 @@ private:
 
 inline void ovariable_descriptor::close()
 {
+  if (not closable())
+  {
+    return;
+  }
   opipe_descriptor::close();
   read();
   input_pipe_.close();
+  fd_ = -1;
 }
 class ivariable_descriptor : public ipipe_descriptor
 {
@@ -491,6 +494,10 @@ private:
 
 inline void ivariable_descriptor::open()
 {
+  if (closable())
+  {
+    return;
+  }
   ipipe_descriptor::open();
   write();
   output_pipe_.close();
@@ -562,6 +569,43 @@ inline void link(ipipe_descriptor& fd1, opipe_descriptor& fd2)
   fd2.linked_fd_ = &fd1;
 }
 
+namespace posix_util
+{
+class posix_spawn_file_actions
+{
+public:
+  posix_spawn_file_actions()
+  {
+    posix_spawn_file_actions_init(&actions_);
+    closed_fds_.reserve(3);
+  }
+  posix_spawn_file_actions(const posix_spawn_file_actions&)     = default;
+  posix_spawn_file_actions(posix_spawn_file_actions&&) noexcept = default;
+  posix_spawn_file_actions& operator=(const posix_spawn_file_actions&) = default;
+  posix_spawn_file_actions& operator=(posix_spawn_file_actions&&) noexcept = default;
+  ~posix_spawn_file_actions() { posix_spawn_file_actions_destroy(&actions_); }
+
+  void dup(const descriptor_ptr& fd_from, standard_filenos fd_to)
+  {
+    posix_spawn_file_actions_adddup2(&actions_, fd_from->fd(), static_cast<int>(fd_to));
+  }
+  void close(const descriptor_ptr& fd)
+  {
+    if (fd->closable() and closed_fds_.find(fd->fd()) == closed_fds_.end())
+    {
+      posix_spawn_file_actions_addclose(&actions_, fd->fd());
+      closed_fds_.insert(fd->fd());
+    }
+  }
+
+  posix_spawn_file_actions_t* get() { return &actions_; }
+
+private:
+  posix_spawn_file_actions_t actions_{};
+  std::unordered_set<int> closed_fds_{};
+};
+} // namespace posix_util
+
 class posix_process
 {
 
@@ -593,31 +637,28 @@ private:
 
 inline void posix_process::execute()
 {
-  auto dup_and_close = [](posix_spawn_file_actions_t* action, descriptor_ptr& fd, const descriptor& dup_to)
+  auto process_fds = [](posix_util::posix_spawn_file_actions& action, descriptor_ptr& fd,
+                        posix_util::standard_filenos dup_to)
   {
     fd->open();
-    posix_spawn_file_actions_adddup2(action, fd->fd(), dup_to.fd());
-    if (fd->closable())
-    {
-      posix_spawn_file_actions_addclose(action, fd->fd());
-    }
+    action.dup(fd, dup_to);
   };
 
   posix_util::shell_expander sh{cmd_};
-  posix_spawn_file_actions_t action;
+  posix_util::posix_spawn_file_actions action;
 
-  posix_spawn_file_actions_init(&action);
-  dup_and_close(&action, stdin_fd_, descriptor{static_cast<int>(posix_util::standard_filenos::standard_in)});
-  dup_and_close(&action, stdout_fd_,
-                descriptor{static_cast<int>(posix_util::standard_filenos::standard_out)});
-  dup_and_close(&action, stderr_fd_,
-                descriptor{static_cast<int>(posix_util::standard_filenos::standard_error)});
+  process_fds(action, stdin_fd_, posix_util::standard_filenos::standard_in);
+  process_fds(action, stdout_fd_, posix_util::standard_filenos::standard_out);
+  process_fds(action, stderr_fd_, posix_util::standard_filenos::standard_error);
+  action.close(stdin_fd_);
+  action.close(stdout_fd_);
+  action.close(stderr_fd_);
+
   int pid{};
-  if (::posix_spawnp(&pid, sh.argv()[0], &action, nullptr, sh.argv(), nullptr) != 0)
+  if (::posix_spawnp(&pid, sh.argv()[0], action.get(), nullptr, sh.argv(), nullptr) != 0)
   {
     throw exceptions::os_error{"Failed to spawn process"};
   }
-  posix_spawn_file_actions_destroy(&action);
   pid_ = pid;
   stdin_fd_->close();
   stdout_fd_->close();
