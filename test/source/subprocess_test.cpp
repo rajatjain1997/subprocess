@@ -45,3 +45,5 @@ TEST_CASE("nothrow variant doesn't throw on bad exit status")
   REQUIRE_NOTHROW(command{"false"}.run(std::nothrow));
   CHECK_NE(command{"false"}.run(std::nothrow), 0);
 }
+
+TEST_CASE("_cmd literal constructs object") { CHECK(false); }
