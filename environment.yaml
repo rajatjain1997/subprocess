@@ -1,9 +1,0 @@
-name: subprocess
-channels:
-  - conda-forge
-  - defaults
-dependencies:
-  - cmake
-  - doxygen=1.8
-  - jinja2
-  - pygments
