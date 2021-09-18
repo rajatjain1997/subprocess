@@ -7,4 +7,4 @@ using subprocess::command;
 
 // TEST(subprocess, test_simple_cmd) { command{"ls"}.run(); }
 
-int main() { command{"ls"}.run(); }
+int main() { command{"echo running correctly"}.run(); }
