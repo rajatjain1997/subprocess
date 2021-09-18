@@ -1,10 +1,8 @@
-#include <string>
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
 
-// #include <gtest/gtest.h>
 #include <subprocess/subprocess.hpp>
 
 using subprocess::command;
 
-// TEST(subprocess, test_simple_cmd) { command{"ls"}.run(); }
-
-int main() { command{"echo running correctly"}.run(); }
+TEST_CASE("testing simple echo command") { CHECK(command{"echo running correctly"}.run() == 0); }

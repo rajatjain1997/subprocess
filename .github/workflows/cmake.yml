@@ -76,8 +76,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install conan
-      run: pip3 install conan
+    # - name: Install conan
+    #   run: pip3 install conan
 
     - name: Configure
       env: { CXX: clang++-11 }
@@ -109,8 +109,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install conan
-      run: pip3 install conan
+    # - name: Install conan
+    #   run: pip3 install conan
 
     - name: Install static analyzers
       if: matrix.os == 'ubuntu'
