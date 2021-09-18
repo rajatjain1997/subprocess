@@ -13,6 +13,7 @@ endif()
 add_executable(subprocess_test source/subprocess_test.cpp)
 target_link_libraries(subprocess_test PRIVATE
     subprocess::subprocess
+    -lstdc++fs
 )
 target_include_directories(subprocess_test PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party
