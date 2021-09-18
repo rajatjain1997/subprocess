@@ -77,7 +77,7 @@ The following operators are available for redirecting stdout:
 
 ```cpp
 // Redirecting stdout to stderr
-cmd > subprocess::err();
+cmd > subprocess::err;
 
 // Redirecting stdout to a file
 cmd > std::filesystem::path{file_name};
@@ -101,7 +101,7 @@ The following operators are available for redirecting stdout:
 
 ```cpp
 // Redirecting stderr to stdout
-cmd >= subprocess::err();
+cmd >= subprocess::out;
 
 // Redirecting stderr to a file
 cmd >= std::filesystem::path{file_name};
