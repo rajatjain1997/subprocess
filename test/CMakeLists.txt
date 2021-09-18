@@ -13,8 +13,10 @@ endif()
 add_executable(subprocess_test source/subprocess_test.cpp)
 target_link_libraries(subprocess_test PRIVATE
     subprocess::subprocess
-    CONAN_PKG::gtest
-    )
+)
+target_include_directories(subprocess_test PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
 target_compile_features(subprocess_test PRIVATE cxx_std_17)
 
 add_test(NAME subprocess_test COMMAND subprocess_test)
