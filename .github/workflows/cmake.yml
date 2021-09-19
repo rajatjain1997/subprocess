@@ -34,7 +34,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    if: github.repository_owner == 'rajatjain1997' && false
+    if: github.repository_owner == 'rajatjain1997'
 
     steps:
     - uses: actions/checkout@v2
