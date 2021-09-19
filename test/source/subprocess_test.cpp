@@ -58,3 +58,13 @@ TEST_CASE("_cmd literal + string chaining")
   int errc = ("ps aux"_cmd | "awk '{print $2}'" | "sort" | "uniq" | "head -n1"_cmd > "/dev/null").run();
   CHECK_EQ(errc, 0);
 }
+
+TEST_CASE("bash-like redirection")
+{
+  using namespace subprocess::literals;
+  std::string output;
+  int errc = ("awk -l"_cmd > output >= subprocess::out).run(std::nothrow);
+  REQUIRE_NE(errc, 0);
+  REQUIRE(output != "\n");
+  REQUIRE(not output.empty());
+}

@@ -2,6 +2,7 @@
 
 ![cppver](https://img.shields.io/badge/C%2B%2B-17-blue)
 ![build](https://github.com/rajatjain1997/subprocess/actions/workflows/cmake.yml/badge.svg?branch=master)
+[![codecov](https://codecov.io/gh/rajatjain1997/subprocess/branch/master/graph/badge.svg?token=BQX8LHUXQ8)](https://codecov.io/gh/rajatjain1997/subprocess)
 [![issues](https://img.shields.io/github/issues/rajatjain1997/subprocess)](https://github.com/rajatjain1997/subprocess/issues)
 ![GitHub](https://img.shields.io/github/license/rajatjain1997/subprocess)
 [![online](https://img.shields.io/badge/try%20it-online-brightgreen)](https://wandbox.org/permlink/T0iHbd6sSIXzM9vO)
