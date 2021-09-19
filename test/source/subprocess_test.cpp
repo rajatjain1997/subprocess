@@ -51,3 +51,10 @@ TEST_CASE("_cmd literal constructs subprocess::command")
   using namespace subprocess::literals;
   CHECK_EQ(("true"_cmd).run(), 0);
 }
+
+TEST_CASE("_cmd literal + string chaining")
+{
+  using namespace subprocess::literals;
+  int errc = ("ps aux"_cmd | "awk '{print $2}'" | "sort" | "uniq" | "head -n1"_cmd > "/dev/null").run();
+  CHECK_EQ(errc, 0);
+}
