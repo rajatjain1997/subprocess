@@ -2,10 +2,16 @@
 
 ## Build
 
+This project is header file only. You don't need to do any builds if you are
+want to use it for your project. For developers, the following commands can be
+used to build the tests.
+
 This project doesn't require any special command-line flags to build to keep
 things simple.
 
-Here are the steps for building in release mode with a single-configuration
+You can simply use the `build.sh` in the project root to build the project.
+
+Alternatively, here are the steps for building in release mode with a single-configuration
 generator, like the Unix Makefiles one:
 
 ```sh

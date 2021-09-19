@@ -73,7 +73,10 @@
     },
     {
       "name": "ci-coverage",
-      "inherits": ["coverage-unix", "dev-mode"],
+      "inherits": [
+        "coverage-unix",
+        "dev-mode"
+      ],
       "cacheVariables": {
         "COVERAGE_HTML_COMMAND": ""
       }
@@ -81,7 +84,10 @@
     {
       "name": "ci-sanitize",
       "binaryDir": "${sourceDir}/build/sanitize",
-      "inherits": ["ci-unix", "dev-mode"],
+      "inherits": [
+        "ci-unix",
+        "dev-mode"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Sanitize",
         "CMAKE_CXX_FLAGS_SANITIZE": "-O2 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-common"
@@ -94,15 +100,83 @@
     },
     {
       "name": "ci-macos",
-      "inherits": ["ci-build", "ci-unix", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-unix",
+        "dev-mode"
+      ]
     },
     {
       "name": "ci-ubuntu",
-      "inherits": ["ci-build", "ci-unix", "clang-tidy", "cppcheck", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-unix",
+        "clang-tidy",
+        "cppcheck",
+        "dev-mode"
+      ]
     },
     {
       "name": "ci-windows",
-      "inherits": ["ci-build", "ci-win64", "dev-mode"]
+      "inherits": [
+        "ci-build",
+        "ci-win64",
+        "dev-mode"
+      ]
+    },
+    {
+      "name": "folders",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_PROJECT_INCLUDE": "${sourceDir}/project-include-after.cmake"
+      }
+    },
+    {
+      "name": "static-analyzers",
+      "hidden": true,
+      "inherits": []
+    },
+    {
+      "name": "dev-common",
+      "hidden": true,
+      "inherits": [
+        "folders",
+        "static-analyzers",
+        "dev-mode"
+      ],
+      "cacheVariables": {
+        "BUILD_MCSS_DOCS": "ON"
+      }
+    },
+    {
+      "name": "dev-unix",
+      "binaryDir": "${sourceDir}/build/dev-unix",
+      "inherits": [
+        "dev-common",
+        "ci-unix"
+      ]
+    },
+    {
+      "name": "dev-win64",
+      "binaryDir": "${sourceDir}/build/dev-win64",
+      "inherits": [
+        "dev-common",
+        "ci-win64"
+      ]
+    },
+    {
+      "name": "dev",
+      "binaryDir": "${sourceDir}/build/dev",
+      "inherits": "dev-unix"
+    },
+    {
+      "name": "dev-coverage",
+      "binaryDir": "${sourceDir}/build/coverage",
+      "inherits": [
+        "folders",
+        "dev-mode",
+        "coverage-unix"
+      ]
     }
   ]
 }

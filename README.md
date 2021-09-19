@@ -8,14 +8,16 @@
 [![online](https://img.shields.io/badge/try%20it-online-brightgreen)](https://wandbox.org/permlink/T0iHbd6sSIXzM9vO)
 ![stars](https://img.shields.io/github/stars/rajatjain1997/subprocess?style=social)
 
-There are many C++ subprocessing libraries out there, but none of them *just* work. The aim of this library is to allow you to write shell commands in C++ *almost* as if you were writing them in shell.
+A no nonsense library for writing shell commands in C++.
+
+Writing shell commands in modern C++ is deceptively hard. There are many C++ subprocessing libraries out there, but none of them *just* work. The aim of this library is to allow you to write shell commands in C++ *almost* as if you were writing them in shell.
 
 Full documentation for `subprocess` is available [here](https://subprocess.thecodepad.com).
 
-**Note:** Windows is not currently supported. I would like to pin down the library interface before adding compatibility for the OS.
+**Note:** Windows is not currently supported.
 ## TL;DR
 
-It works exactly how you would expect it to work.
+It works exactly how you would expect it to work. Drop [`subprocess.hpp`](https://raw.githubusercontent.com/rajatjain1997/subprocess/master/include/subprocess/subprocess.hpp) in your project, include it, and start working!
 
 ```cpp
 #include <subprocess.hpp>
@@ -24,15 +26,21 @@ using namespace subprocess::literals;
 
 int main()
 {
-    std::string owners;
-    ("ls -l"_cmd | "awk 'NR>1{print $3}'"_cmd | "sort"_cmd | "uniq"_cmd > owners).run();
-    // Use the owners as you wish
+    std::string cmd_output;
+    ("ls -l"_cmd | "awk 'NR>1{print $3}'"_cmd | "sort"_cmd | "uniq"_cmd > cmd_output).run();
+    // Use cmd_output in the program
 }
 ```
 
 ## Philosophy
 
 Instead of trying to emulate the subprocess interface from libraries in other languages, this library aims to use (and abuse) C++ operator overloading to achieve a shell-like syntax for writing shell commands.
+
+`subprocess` follows these design goals:
+
+ - **Intuitive Syntax**: Common operations on subprocess commands should feel like shell. This should allow users to compose commands in a familiar manner. There should ideally be no gotchas or differences in the behavior of `subprocess` and unix shell. In case such differences arise, they should be clearly documented.
+ - **Trivial Integration**: The whole code comprises of a single [`subprocess.hpp`](https://raw.githubusercontent.com/rajatjain1997/subprocess/master/include/subprocess/subprocess.hpp) and requires no adjustments to compiler flags or project settings. It has no dependencies, subprojects or dependencies on any build system.
+ - **Serious Testing**: A CI pipeline performs heavy [integration-testing](https://en.wikipedia.org/wiki/Integration_testing) that covers more than 90% of the code. These tests are run on all the platforms the library supports. Additionally, address and memory sanitizers are run to detect any memory or resourse leaks.
 
 ## Overview
 
