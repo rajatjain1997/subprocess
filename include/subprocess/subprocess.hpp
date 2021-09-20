@@ -445,6 +445,14 @@ public:
 
 class ipipe_descriptor;
 
+/**
+ * @brief A descriptor wrapping the output end of a posix OS pipe
+ *
+ * This class, when paired with ipipe_descriptor, consists of an OS
+ * pipe. A pipe is constructed whenever open is called an object of
+ * this type or its linked ipipe_descriptor. These should always be
+ * constructed in pair with the subprocess::create_pipe method.
+ */
 class opipe_descriptor : public odescriptor
 {
 public:
@@ -457,6 +465,14 @@ protected:
   friend void link(ipipe_descriptor& fd1, opipe_descriptor& fd2);
 };
 
+/**
+ * @brief A descriptor wrapping the input end of a posix OS pipe
+ *
+ * This class, when paired with opipe_descriptor, consists of an OS
+ * pipe. A pipe is constructed whenever open is called an object of
+ * this type or its linked opipe_descriptor. These should always be
+ * constructed in pair with the subprocess::create_pipe method.
+ */
 class ipipe_descriptor : public idescriptor
 {
 public:
@@ -551,9 +567,13 @@ inline void ivariable_descriptor::open()
 }
 
 /**
- * @brief Create an OS level pipe and return read and write fds.
+ * @brief Create opipe_descriptor and ipipe_descriptor objects and links them
  *
- * @return std::pair<descriptor, descriptor> A pair of linked file_descriptos [read_fd, write_fd]
+ * Calling this method does not automatically create a pipe. You need to call open() on
+ * any one of the resulting objects to initialize the pipe.
+ *
+ * @return std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> A pair of linked
+ * file_descriptos [read_fd, write_fd]
  */
 inline std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> create_pipe()
 {
@@ -618,6 +638,20 @@ inline void link(ipipe_descriptor& fd1, opipe_descriptor& fd2)
 
 namespace posix_util
 {
+
+/**
+ * @brief A RAII wrapper over posix_spawn_file_actions_t
+ *
+ * posix_spawn_file_actions_t is used by the POSIX system call posix_spawnp
+ * to decide what to do with the file descriptors after a child process is spawned.
+ *
+ * Any actions added to the object are performed sequentially in the child. If any action
+ * is invalid or leads to an os_error, posix_spawnp errors out.
+ *
+ * This class manages the lifetime of the posix_spawn_file_actions_t objects so
+ * that it is difficult for the user to leak memory. It also exports some helper
+ * functions to add actions to the encapsulated posix_spawn_file_actions_t struct.
+ */
 class posix_spawn_file_actions
 {
 public:
@@ -653,6 +687,27 @@ private:
 };
 } // namespace posix_util
 
+/**
+ * @brief Abstraction of a POSIX process with stdin, stdout, and stderr.
+ *
+ * This class encapsulates a POSIX process. It is the actual interface for
+ * running subprocesses. The descriptors in this class can be pointed to
+ * each other, and to other opened descriptors.
+ *
+ * posix::spawnp is used to spawn child processes. The following actions
+ * are performed on descriptors on execution:
+ *
+ *  - All descriptors are opened with a call to descriptor::open().
+ *  - descriptor::fd() is used to get descriptors for the child process and
+ *     dup them to stdin, stdout, and stderr
+ *  - In the child process, the descriptors returned by descriptor::fd() would
+ *    be closed.
+ *  - After the process is spawned, the parent process closes each descriptor with
+ *    a call to descriptor::close.
+ *
+ * Therefore, while providing your own descriptors, it is important to correctly implement
+ * open(), fd(), and close() calls to the class that derives from subprocess::descriptor.
+ */
 class posix_process
 {
 
@@ -682,6 +737,16 @@ private:
   std::optional<int> pid_;
 };
 
+/**
+ * @brief Spawns the child process
+ *
+ * This method performs shell expansion, manages the file descriptors,
+ * and ensures that the child process is spawned with the correct
+ * descriptors.
+ *
+ * It does NOT reap the child process from the process table.
+ *
+ */
 inline void posix_process::execute()
 {
   auto process_fds = [](posix_util::posix_spawn_file_actions& action, descriptor_ptr& fd,
@@ -712,6 +777,11 @@ inline void posix_process::execute()
   stderr_fd_->close();
 }
 
+/**
+ * @brief Reaps the child process from the process table
+ *
+ * @return int exit status of the process
+ */
 inline int posix_process::wait()
 {
   if (not pid_)
