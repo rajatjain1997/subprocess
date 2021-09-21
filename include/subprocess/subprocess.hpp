@@ -32,10 +32,13 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cerrno>
 #include <filesystem>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <list>
 #include <memory>
 #include <new>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -59,6 +62,19 @@ namespace subprocess
 
 namespace exceptions
 {
+
+inline namespace _impl
+{
+static class : public std::error_category
+{
+public:
+  const char* name() const noexcept override { return "subprocess"; }
+  std::string message([[maybe_unused]] int condition /*unused*/) const override { return "subprocess_error"; }
+} subprocess_category_impl;
+}; // namespace _impl
+
+const std::error_category& subprocess_category() { return subprocess_category_impl; }
+
 /**
  * @brief A catch-all class for all errors thrown by subprocess.
  *
@@ -70,8 +86,21 @@ class subprocess_error : public std::system_error
 {
 public:
   using system_error::system_error;
-  subprocess_error(std::string_view what_arg, int errc = errno)
-      : system_error{errc, std::generic_category(), what_arg.data()}
+  subprocess_error(std::string_view what_arg, int errc,
+                   const std::error_category& errcat = subprocess_category())
+      : system_error{errc, errcat, what_arg.data()}
+  {
+  }
+  subprocess_error(std::initializer_list<std::string> what_arg, int errc,
+                   const std::error_category& errcat = subprocess_category())
+      : subprocess_error{[&what_arg]
+                         {
+                           std::ostringstream ostr;
+                           std::copy(what_arg.begin(), what_arg.end(),
+                                     std::ostream_iterator<std::string>(ostr, " "));
+                           return ostr.str();
+                         }(),
+                         errc, errcat}
   {
   }
 };
@@ -105,13 +134,21 @@ class os_error : public subprocess_error
 {
 public:
   using subprocess_error::subprocess_error;
+  os_error(std::string_view what_arg, int errc = errno)
+      : subprocess_error{what_arg, errc, std::generic_category()}
+  {
+  }
+  os_error(std::initializer_list<std::string> what_arg, int errc = errno)
+      : subprocess_error{std::move(what_arg), errc, std::generic_category()}
+  {
+  }
 };
 
 /**
  * @brief Thrown when a command exits with a non-zero exit code.
  *
  * This exception is thrown whenever a subprocess constructed from subprocess::command
- * exits with an error. The return_code() member function can be called to get the return code.
+ * exits with an error. The code() member function can be called to get the return code.
  */
 
 class command_error : public subprocess_error
@@ -409,7 +446,7 @@ inline void file_descriptor::open()
   }
   else
   {
-    throw exceptions::os_error{"open: " + path_};
+    throw exceptions::os_error{"open", path_};
   }
 }
 
@@ -769,7 +806,7 @@ inline void posix_process::execute()
   int pid{};
   if (int err{::posix_spawnp(&pid, sh.argv()[0], action.get(), nullptr, sh.argv(), nullptr)}; err != 0)
   {
-    throw exceptions::os_error{"posix_spawnp: " + std::string{sh.argv()[0]}, err};
+    throw exceptions::os_error{{"posix_spawnp:", sh.argv()[0]}, err};
   }
   pid_ = pid;
   stdin_fd_->close();
@@ -880,7 +917,7 @@ inline int command::run()
   int status{run(std::nothrow)};
   if (status != 0)
   {
-    throw exceptions::command_error{"Command exited with code " + std::to_string(status) + ".", status};
+    throw exceptions::command_error{{"command exitstatus", std::to_string(status)}, status};
   }
   return status;
 }
@@ -1014,7 +1051,7 @@ inline command&& operator<(command&& cmd, std::filesystem::path file_name)
   return std::move(cmd < std::move(file_name));
 }
 
-namespace literals
+inline namespace literals
 {
 inline command operator""_cmd(const char* cmd, size_t /*unused*/) { return command{cmd}; }
 } // namespace literals

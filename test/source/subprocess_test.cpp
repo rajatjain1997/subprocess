@@ -38,6 +38,7 @@ TEST_CASE("os_error throw on bad command")
 TEST_CASE("command_error throw on bad exit status")
 {
   REQUIRE_THROWS_AS(command{"false"}.run(), subprocess::exceptions::command_error);
+  REQUIRE_THROWS_WITH(command{"false"}.run(), "command exitstatus 1 : subprocess_error");
 }
 
 TEST_CASE("nothrow variant doesn't throw on bad exit status")
@@ -67,4 +68,10 @@ TEST_CASE("bash-like redirection")
   REQUIRE_NE(errc, 0);
   REQUIRE(output != "\n");
   REQUIRE(not output.empty());
+}
+
+TEST_CASE("pipe_descriptors double linking not allowed")
+{
+  auto [read_desc, write_desc] = subprocess::create_pipe();
+  REQUIRE_THROWS_AS(subprocess::link(*read_desc, *write_desc), subprocess::exceptions::usage_error);
 }
