@@ -421,7 +421,13 @@ inline std::string idescriptor::read()
 class file_descriptor : public virtual descriptor
 {
 public:
-  file_descriptor(std::string path, int mode) : path_{std::move(path)}, mode_{mode} {}
+  /* Default file permissions are read/write for user/group/other,
+   * modified by umask like normal.
+   */
+  file_descriptor(std::string path, int flags, mode_t mode = 0666)
+      : path_{std::move(path)}, flags_{flags}, mode_{mode}
+  {
+  }
   file_descriptor(const file_descriptor&)     = default;
   file_descriptor(file_descriptor&&) noexcept = default;
   file_descriptor& operator=(const file_descriptor&) = default;
@@ -431,7 +437,8 @@ public:
 
 private:
   std::string path_;
-  int mode_;
+  int flags_;
+  mode_t mode_;
 };
 
 inline void file_descriptor::open()
@@ -440,7 +447,7 @@ inline void file_descriptor::open()
   {
     return;
   }
-  if (int fd{::open(path_.c_str(), mode_)}; fd >= 0)
+  if (int fd{::open(path_.c_str(), flags_, mode_)}; fd >= 0)
   {
     fd_ = fd;
   }
@@ -459,8 +466,8 @@ class ofile_descriptor : public virtual odescriptor, public virtual file_descrip
 public:
   using file_descriptor::closable;
   using file_descriptor::close;
-  explicit ofile_descriptor(std::string path, int mode = 0)
-      : file_descriptor{std::move(path), O_WRONLY | mode}
+  explicit ofile_descriptor(std::string path, int flags = 0, mode_t mode = 0666)
+      : file_descriptor{std::move(path), O_WRONLY | flags, mode}
   {
   }
 };
@@ -474,8 +481,8 @@ class ifile_descriptor : public virtual idescriptor, public virtual file_descrip
 public:
   using file_descriptor::closable;
   using file_descriptor::close;
-  explicit ifile_descriptor(std::string path, int mode = 0)
-      : file_descriptor{std::move(path), O_RDONLY | mode}
+  explicit ifile_descriptor(std::string path, int flags = 0, mode_t mode = 0666)
+      : file_descriptor{std::move(path), O_RDONLY | flags, mode}
   {
   }
 };
