@@ -425,7 +425,7 @@ public:
    * modified by umask like normal.
    */
   file_descriptor(std::string path, int flags, mode_t mode = 0666)
-      : path_{std::move(path)}, flags_{flags}, mode_{mode}
+      : path_{std::move(path)}, flags_{O_CLOEXEC | flags}, mode_{mode}
   {
   }
   file_descriptor(const file_descriptor&)     = default;
@@ -540,6 +540,11 @@ inline void opipe_descriptor::open()
   {
     throw exceptions::os_error{"pipe"};
   }
+  //! Required because MacOS doesn't have ::pipe2
+  for (auto pipe_fd : fd)
+  {
+    ::fcntl(pipe_fd, F_SETFD, FD_CLOEXEC);
+  }
   linked_fd_->fd_ = fd[0];
   fd_             = fd[1];
 }
@@ -554,6 +559,11 @@ inline void ipipe_descriptor::open()
   if (::pipe(fd.data()) < 0)
   {
     throw exceptions::os_error{"pipe"};
+  }
+  //! Required because MacOS doesn't have ::pipe2
+  for (auto pipe_fd : fd)
+  {
+    ::fcntl(pipe_fd, F_SETFD, FD_CLOEXEC);
   }
   fd_             = fd[0];
   linked_fd_->fd_ = fd[1];
@@ -617,7 +627,7 @@ inline void ivariable_descriptor::open()
  * any one of the resulting objects to initialize the pipe.
  *
  * @return std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> A pair of linked
- * file_descriptos [read_fd, write_fd]
+ * pipe_descriptors [read_fd, write_fd]
  */
 inline std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> create_pipe()
 {
@@ -744,8 +754,8 @@ private:
  *  - All descriptors are opened with a call to descriptor::open().
  *  - descriptor::fd() is used to get descriptors for the child process and
  *     dup them to stdin, stdout, and stderr
- *  - In the child process, the descriptors returned by descriptor::fd() would
- *    be closed.
+ *  - In the child process, the descriptors would be duped to the their std counterparts
+ *    and all the fd's marked with O_CLOEXEC would be automatically closed.
  *  - After the process is spawned, the parent process closes each descriptor with
  *    a call to descriptor::close.
  *
@@ -806,9 +816,6 @@ inline void posix_process::execute()
   process_fds(action, stdin_fd_, posix_util::standard_filenos::standard_in);
   process_fds(action, stdout_fd_, posix_util::standard_filenos::standard_out);
   process_fds(action, stderr_fd_, posix_util::standard_filenos::standard_error);
-  action.close(stdin_fd_);
-  action.close(stdout_fd_);
-  action.close(stderr_fd_);
 
   int pid{};
   if (int err{::posix_spawnp(&pid, sh.argv()[0], action.get(), nullptr, sh.argv(), nullptr)}; err != 0)

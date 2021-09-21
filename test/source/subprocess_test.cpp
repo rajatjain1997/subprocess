@@ -70,6 +70,15 @@ TEST_CASE("bash-like redirection")
   REQUIRE(not output.empty());
 }
 
+TEST_CASE("SIGPIPE handling for child processes")
+{
+  using namespace subprocess::literals;
+  std::string output;
+  int errc = ("yes"_cmd | "head -n1"_cmd > output).run();
+  REQUIRE_EQ(errc, 0);
+  REQUIRE_EQ(output, "y\n");
+}
+
 TEST_CASE("pipe_descriptors double linking not allowed")
 {
   auto [read_desc, write_desc] = subprocess::create_pipe();
