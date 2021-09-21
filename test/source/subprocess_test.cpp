@@ -60,7 +60,7 @@ TEST_CASE("_cmd literal + string chaining")
   CHECK_EQ(errc, 0);
 }
 
-TEST_CASE("bash-like redirection")
+TEST_CASE("bash-like redirection - stderr to stdout")
 {
   using namespace subprocess::literals;
   std::string output;
@@ -68,6 +68,15 @@ TEST_CASE("bash-like redirection")
   REQUIRE_NE(errc, 0);
   REQUIRE(output != "\n");
   REQUIRE(not output.empty());
+}
+
+TEST_CASE("bash-like redirection - stdout to stderr")
+{
+  using namespace subprocess::literals;
+  std::string output;
+  int errc = ("echo abc"_cmd >= output > subprocess::err).run(std::nothrow);
+  REQUIRE_EQ(errc, 0);
+  REQUIRE(output == "abc\n");
 }
 
 TEST_CASE("SIGPIPE handling for child processes")
