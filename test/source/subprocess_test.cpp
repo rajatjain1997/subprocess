@@ -18,7 +18,7 @@ TEST_CASE("variable output redirection")
 TEST_CASE("variable input redirection")
 {
   std::string input{"1\n2\n3\n4\n5"}, output;
-  (command{"head -n2"}<input> output).run();
+  (command{"head -n2"} > output < input).run();
   CHECK_EQ(output, "1\n2\n");
 }
 
@@ -77,6 +77,13 @@ TEST_CASE("bash-like redirection - stdout to stderr")
   int errc = ("echo abc"_cmd >= output > subprocess::err).run(std::nothrow);
   REQUIRE_EQ(errc, 0);
   REQUIRE(output == "abc\n");
+}
+
+TEST_CASE("expanding subcommands")
+{
+  std::string output;
+  (subprocess::command{"echo $(yes | head -1)"} > output).run();
+  REQUIRE_EQ(output, "y\n");
 }
 
 TEST_CASE("SIGPIPE handling for child processes")

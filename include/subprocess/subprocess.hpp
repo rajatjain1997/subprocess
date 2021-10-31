@@ -25,7 +25,8 @@ LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CO
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
+#ifndef RJAIN_SUBPROCESS_INCLUDED
+#define RJAIN_SUBPROCESS_INCLUDED
 
 #include <algorithm>
 #include <array>
@@ -73,7 +74,7 @@ public:
 } subprocess_category_impl;
 }; // namespace _impl
 
-const std::error_category& subprocess_category() { return subprocess_category_impl; }
+constexpr std::error_category& subprocess_category() { return subprocess_category_impl; }
 
 /**
  * @brief A catch-all class for all errors thrown by subprocess.
@@ -343,7 +344,7 @@ inline void odescriptor::write(std::string& input)
   std::ptrdiff_t offset = 0;
   while (total > 0)
   {
-    if (ssize_t len; (len = ::write(fd(), input.c_str() + offset, total)) >= 0)
+    if (ssize_t len{::write(fd(), input.c_str() + offset, total)}; len >= 0)
     {
       offset += len;
       total -= len;
@@ -1071,3 +1072,5 @@ inline command operator""_cmd(const char* cmd, size_t /*unused*/) { return comma
 } // namespace literals
 
 } // namespace subprocess
+
+#endif
