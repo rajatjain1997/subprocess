@@ -20,7 +20,7 @@ Full documentation for `subprocess` is available [here](https://subprocess.theco
 It works exactly how you would expect it to work. Drop [`subprocess.hpp`](https://raw.githubusercontent.com/rajatjain1997/subprocess/master/include/subprocess/subprocess.hpp) in your project, include it, and start working!
 
 ```cpp
-#include <subprocess.hpp>
+#include <subprocess/subprocess.hpp>
 
 using namespace subprocess::literals;
 
@@ -121,6 +121,21 @@ cmd >>= std::filesystem::path{file_name};
 // Capturing stderr in a variable
 std::string var_name;
 cmd >= var_name;
+```
+
+##  CMake FetchContent
+
+This is a header only library. So developer can just copy-paste its content into their project without any configuration.
+
+For those who want to manage their dependencies using CMake FetchContent, this can be used:
+```cmake
+include(FetchContent)
+FetchContent_Declare(subprocess
+  GIT_REPOSITORY https://github.com/rajatjain1997/subprocess
+  GIT_TAG v0.1.1
+  GIT_PROGRESS TRUE
+)
+target_link_libraries(my_application subprocess::subprocess)
 ```
 
 ## Conclusion
