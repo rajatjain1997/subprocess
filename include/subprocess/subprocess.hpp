@@ -186,9 +186,9 @@ class shell_expander
 {
 public:
   explicit shell_expander(const std::string& s) { ::wordexp(s.c_str(), &parsed_args_, 0); }
-  shell_expander(const shell_expander&)     = default;
-  shell_expander(shell_expander&&) noexcept = default;
-  shell_expander& operator=(const shell_expander&) = default;
+  shell_expander(const shell_expander&)                = default;
+  shell_expander(shell_expander&&) noexcept            = default;
+  shell_expander& operator=(const shell_expander&)     = default;
   shell_expander& operator=(shell_expander&&) noexcept = default;
   ~shell_expander() { ::wordfree(&parsed_args_); }
 
@@ -215,9 +215,9 @@ class descriptor
 public:
   descriptor() = default;
   explicit descriptor(int fd) : fd_{fd} {}
-  descriptor(const descriptor&)     = default;
-  descriptor(descriptor&&) noexcept = default;
-  descriptor& operator=(const descriptor&) = default;
+  descriptor(const descriptor&)                = default;
+  descriptor(descriptor&&) noexcept            = default;
+  descriptor& operator=(const descriptor&)     = default;
   descriptor& operator=(descriptor&&) noexcept = default;
   virtual ~descriptor()                        = default;
 
@@ -380,7 +380,7 @@ public:
    *
    * @return std::string Contents of fd
    */
-  virtual std::string read();
+  [[nodiscard]] virtual std::string read();
   void close() override;
   [[nodiscard]] bool closable() const override { return fd() >= 0; }
 };
@@ -429,9 +429,9 @@ public:
       : path_{std::move(path)}, flags_{O_CLOEXEC | flags}, mode_{mode}
   {
   }
-  file_descriptor(const file_descriptor&)     = default;
-  file_descriptor(file_descriptor&&) noexcept = default;
-  file_descriptor& operator=(const file_descriptor&) = default;
+  file_descriptor(const file_descriptor&)                = default;
+  file_descriptor(file_descriptor&&) noexcept            = default;
+  file_descriptor& operator=(const file_descriptor&)     = default;
   file_descriptor& operator=(file_descriptor&&) noexcept = default;
   ~file_descriptor() override { close(); }
   void open() override;
@@ -630,7 +630,8 @@ inline void ivariable_descriptor::open()
  * @return std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> A pair of linked
  * pipe_descriptors [read_fd, write_fd]
  */
-inline std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>> create_pipe()
+[[nodiscard]] inline std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_descriptor>>
+create_pipe()
 {
   auto read_fd{make_descriptor<ipipe_descriptor>()};
   auto write_fd{make_descriptor<opipe_descriptor>()};
@@ -643,7 +644,7 @@ inline std::pair<descriptor_ptr_t<ipipe_descriptor>, descriptor_ptr_t<opipe_desc
  *
  * @return descriptor stdout
  */
-inline descriptor_ptr std_in()
+[[nodiscard]] inline descriptor_ptr std_in()
 {
   static auto stdin_fd{
       make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_in))};
@@ -654,7 +655,7 @@ inline descriptor_ptr std_in()
  *
  * @return descriptor stdin
  */
-inline descriptor_ptr std_out()
+[[nodiscard]] inline descriptor_ptr std_out()
 {
   static auto stdout_fd{
       make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_out))};
@@ -665,7 +666,7 @@ inline descriptor_ptr std_out()
  *
  * @return descriptor stderr
  */
-inline descriptor_ptr std_err()
+[[nodiscard]] inline descriptor_ptr std_err()
 {
   static auto stderr_fd{
       make_descriptor<descriptor>(static_cast<int>(posix_util::standard_filenos::standard_error))};
@@ -715,9 +716,9 @@ public:
     posix_spawn_file_actions_init(&actions_);
     closed_fds_.reserve(3);
   }
-  posix_spawn_file_actions(const posix_spawn_file_actions&)     = default;
-  posix_spawn_file_actions(posix_spawn_file_actions&&) noexcept = default;
-  posix_spawn_file_actions& operator=(const posix_spawn_file_actions&) = default;
+  posix_spawn_file_actions(const posix_spawn_file_actions&)                = default;
+  posix_spawn_file_actions(posix_spawn_file_actions&&) noexcept            = default;
+  posix_spawn_file_actions& operator=(const posix_spawn_file_actions&)     = default;
   posix_spawn_file_actions& operator=(posix_spawn_file_actions&&) noexcept = default;
   ~posix_spawn_file_actions() { posix_spawn_file_actions_destroy(&actions_); }
 
@@ -771,7 +772,7 @@ public:
 
   void execute();
 
-  int wait();
+  [[nodiscard]] int wait();
 
   const descriptor& in() { return *stdin_fd_; }
 

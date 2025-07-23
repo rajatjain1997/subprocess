@@ -40,7 +40,7 @@ Instead of trying to emulate the subprocess interface from libraries in other la
 
  - **Intuitive Syntax**: Common operations on subprocess commands should feel like shell. This should allow users to compose commands in a familiar manner. There should ideally be no gotchas or differences in the behavior of `subprocess` and unix shell. In case such differences arise, they should be clearly documented.
  - **Trivial Integration**: The whole code comprises of a single [`subprocess.hpp`](https://raw.githubusercontent.com/rajatjain1997/subprocess/master/include/subprocess/subprocess.hpp) and requires no adjustments to compiler flags or project settings. It has no dependencies, subprojects or dependencies on any build system.
- - **Serious Testing**: A CI pipeline performs heavy [integration-testing](https://en.wikipedia.org/wiki/Integration_testing) that covers more than 90% of the code. These tests are run on all the platforms the library supports. Additionally, address and memory sanitizers are run to detect any memory or resourse leaks.
+ - **Serious Testing**: A CI pipeline performs heavy [integration-testing](https://en.wikipedia.org/wiki/Integration_testing) that covers more than 90% of the code. These tests are run on all the platforms the library supports. Additionally, address and memory sanitizers are run to detect any memory or resource leaks.
 
 ## Overview
 
